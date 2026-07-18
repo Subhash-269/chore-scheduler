@@ -1,0 +1,77 @@
+# =========================================================
+# Chore Scheduler Configuration - EXAMPLE
+#
+# Copy this file to config.yml and edit it with your real
+# household's roommates, chores, and days off. config.yml is
+# gitignored (it's personal data) - this example file is the
+# one that's actually tracked in git, so the schema is never
+# lost even though your real config never gets committed.
+#
+#   cp config.example.yml config.yml
+# =========================================================
+
+roommates:
+  - Alice
+  - Bob
+  - Carol
+  - Dave
+
+# Fallback rest buffer for any chore group that doesn't set
+# its own buffer_days below. "Any task is a task" - this is
+# the SAME rule for every chore, so it behaves symmetrically:
+# working today means no task of any kind for N more days.
+buffer_days: 2
+
+# Chore groups. Two ways to define when a chore happens:
+#
+# (1) frequency_days: N  - the solver picks WHICH day, once every N days.
+#
+# (2) piggyback_on: <group name> + every_nth: N  - this chore is NOT
+#     independent. It rides along on every Nth occurrence of the named
+#     host group. Use this when two chores logically belong together
+#     (e.g. mopping makes sense right after sweeping, but not every
+#     time - just every other time).
+#
+# tolerance_days: N (optional, default 0) - how much slack around the
+# strict target is acceptable, with NO violation reported:
+#   - on a frequency_days group: consecutive occurrences only need to be
+#     at least (frequency_days - tolerance_days) apart, not the full
+#     frequency_days every single time. E.g. "every 7 +-2 days" means
+#     gaps of 5-9+ days are all fine, only <5 gets flagged.
+#   - on a piggyback group: instead of landing on the EXACT SAME day as
+#     the host, it can land within tolerance_days of whichever day the
+#     host actually picked for that specific occurrence.
+chore_groups:
+  - name: Dishwashing
+    tasks: ["Dishes"]
+    frequency_days: 1
+
+  - name: Trash
+    tasks: ["Trash"]
+    frequency_days: 7
+    tolerance_days: 1
+
+  - name: Vacuum
+    tasks: ["Vacuum"]
+    frequency_days: 3
+    tolerance_days: 1
+
+  - name: Mop
+    tasks: ["Mop"]
+    piggyback_on: Vacuum
+    every_nth: 2   # Mop happens on every 2nd Vacuum day - combined session
+    tolerance_days: 1
+
+# Per-person days off. Each entry is either:
+#   - a recurring weekday name, e.g. "Saturday"  -> off every week
+#   - an exact date "YYYY-MM-DD"                 -> off just that day
+# Leave the list empty ([]) for someone with no days off.
+days_off:
+  Alice: []
+  Bob: ["Saturday", "Sunday"]
+  Carol: ["Friday"]
+  Dave: []
+
+# Planning window
+start_day: "2026-01-01"
+weeks_to_plan: 4

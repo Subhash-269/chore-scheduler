@@ -1,5 +1,44 @@
+# --- generated output (per-user, per-run - never commit) ---
 *.pdf
 *.csv
 *.docx
-*.yml
+config.yml
 *.json
+
+# but DO track the example config (shows the schema, contains no real data)
+!config.example.yml
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- virtual environments ---
+.env
+.venv
+env/
+venv/
+ENV/
+
+# --- editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
