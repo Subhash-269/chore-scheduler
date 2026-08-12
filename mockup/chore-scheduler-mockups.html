@@ -1,0 +1,771 @@
+<title>Chore Scheduler</title>
+<style>
+  :root{
+    --bg:#f3f4f7;
+    --surface:#ffffff;
+    --surface-alt:#eef0f4;
+    --border:#e2e5eb;
+    --text:#1a1d24;
+    --text-muted:#6b7280;
+    --text-faint:#9aa0ab;
+    --accent:#6d4cf0;
+    --accent-soft:#efe9ff;
+    --accent-contrast:#ffffff;
+    --shadow:0 10px 30px rgba(20,22,30,0.12), 0 2px 6px rgba(20,22,30,0.08);
+    --shadow-sm:0 1px 3px rgba(20,22,30,0.08);
+    --bezel:#111318;
+    --nav-bg:#ffffff;
+    --success:#0f9d6a;
+    --danger:#e0345a;
+
+    --alice:#3b5bdb;
+    --bob:#c2570c;
+    --carol:#b0245c;
+    --dave:#0a8f66;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317;
+      --surface:#1b1e24;
+      --surface-alt:#22262e;
+      --border:#31363f;
+      --text:#f1f2f5;
+      --text-muted:#a2a8b3;
+      --text-faint:#787f8b;
+      --accent:#a68bff;
+      --accent-soft:rgba(166,139,255,0.16);
+      --accent-contrast:#151225;
+      --shadow:0 10px 30px rgba(0,0,0,0.5);
+      --shadow-sm:none;
+      --bezel:#05060a;
+      --nav-bg:#1b1e24;
+
+      --alice:#5b7cff;
+      --bob:#e0812f;
+      --carol:#d8558c;
+      --dave:#1cb381;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317;
+    --surface:#1b1e24;
+    --surface-alt:#22262e;
+    --border:#31363f;
+    --text:#f1f2f5;
+    --text-muted:#a2a8b3;
+    --text-faint:#787f8b;
+    --accent:#a68bff;
+    --accent-soft:rgba(166,139,255,0.16);
+    --accent-contrast:#151225;
+    --shadow:0 10px 30px rgba(0,0,0,0.5);
+    --shadow-sm:none;
+    --bezel:#05060a;
+    --nav-bg:#1b1e24;
+
+    --alice:#5b7cff;
+    --bob:#e0812f;
+    --carol:#d8558c;
+    --dave:#1cb381;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    margin:0;
+  }
+  .wrap{max-width:1400px;margin:0 auto;padding:36px 28px 56px;}
+
+  .page-head{margin-bottom:20px;}
+  .page-head h1{font-size:1.5rem;margin:0 0 6px;letter-spacing:-0.01em;}
+  .page-head p{margin:0;color:var(--text-muted);font-size:0.92rem;max-width:640px;line-height:1.5;}
+
+  .legend{
+    display:flex;flex-wrap:wrap;gap:14px;margin:18px 0 32px;
+    padding:12px 16px;background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;
+  }
+  .legend-item{display:flex;align-items:center;gap:7px;font-size:0.82rem;color:var(--text-muted);}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none;}
+
+  .phones-row{
+    display:flex;gap:28px;overflow-x:auto;padding:6px 6px 18px;
+    scroll-snap-type:x proximity;
+  }
+  .phone-col{flex:none;width:300px;scroll-snap-align:start;}
+  .phone-label{margin:0 0 12px;font-size:0.95rem;font-weight:600;}
+  .phone-label span{display:block;font-weight:400;color:var(--text-muted);font-size:0.78rem;margin-top:2px;}
+
+  .phone{
+    width:300px;height:640px;border-radius:38px;background:var(--bezel);
+    padding:10px;box-shadow:var(--shadow);
+  }
+  .screen{
+    width:100%;height:100%;background:var(--surface);border-radius:30px;
+    overflow:hidden;display:flex;flex-direction:column;position:relative;
+  }
+  .statusbar{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 20px 2px;font-size:0.72rem;font-weight:600;color:var(--text);
+    flex:none;
+  }
+  .statusbar .icons{display:flex;align-items:center;gap:4px;}
+
+  .app-header{padding:6px 18px 12px;flex:none;}
+  .app-header .title-row{display:flex;justify-content:space-between;align-items:flex-start;}
+  .app-header h2{margin:0;font-size:1.15rem;letter-spacing:-0.01em;}
+  .app-header .sub{margin:2px 0 0;font-size:0.78rem;color:var(--text-muted);}
+
+  .avatar{
+    width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:0.68rem;font-weight:700;color:#fff;flex:none;
+  }
+  .avatar.sm{width:22px;height:22px;font-size:0.6rem;}
+
+  .content{flex:1;overflow-y:auto;padding:2px 18px 10px;}
+  .content::-webkit-scrollbar{display:none;}
+
+  .icon-badge{
+    width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .icon-badge svg{width:18px;height:18px;}
+
+  /* ---- shared cards ---- */
+  .card{
+    background:var(--surface-alt);border:1px solid var(--border);border-radius:14px;
+    padding:12px 14px;margin-bottom:10px;
+  }
+  .row{display:flex;align-items:center;gap:11px;}
+  .row + .row{margin-top:9px;}
+  .grow{flex:1;min-width:0;}
+  .name{font-size:0.86rem;font-weight:600;}
+  .meta{font-size:0.72rem;color:var(--text-muted);margin-top:1px;}
+  .chip{
+    font-size:0.66rem;font-weight:600;padding:3px 8px;border-radius:20px;
+    background:var(--accent-soft);color:var(--accent);flex:none;
+  }
+  .chip.done{background:rgba(15,157,106,0.14);color:var(--success);}
+  .chip.muted{background:var(--surface);color:var(--text-faint);border:1px solid var(--border);}
+
+  .check{
+    width:24px;height:24px;border-radius:50%;border:2px solid var(--border);flex:none;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .check.done{background:var(--success);border-color:var(--success);}
+  .check svg{width:12px;height:12px;color:#fff;}
+
+  .section-title{
+    font-size:0.7rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;
+    color:var(--text-faint);margin:16px 0 8px;
+  }
+  .section-title:first-child{margin-top:4px;}
+
+  /* summary ring card (Today) */
+  .summary-card{
+    background:linear-gradient(135deg,var(--accent),var(--accent) 60%,var(--accent));
+    border-radius:16px;padding:16px;color:var(--accent-contrast);margin-bottom:14px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .ring{
+    width:52px;height:52px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    background:conic-gradient(#fff 0deg 270deg, rgba(255,255,255,0.28) 270deg 360deg);
+  }
+  .ring-inner{
+    width:40px;height:40px;border-radius:50%;background:var(--accent);
+    display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;
+  }
+  .summary-card h3{margin:0 0 3px;font-size:0.95rem;}
+  .summary-card p{margin:0;font-size:0.74rem;opacity:0.88;}
+
+  /* calendar */
+  .day-tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;}
+  .day-tab{
+    flex:none;width:38px;padding:7px 0;border-radius:10px;text-align:center;
+    background:var(--surface-alt);border:1px solid var(--border);
+  }
+  .day-tab .d{font-size:0.62rem;color:var(--text-faint);display:block;}
+  .day-tab .n{font-size:0.8rem;font-weight:700;display:block;margin-top:2px;}
+  .day-tab.today{background:var(--accent);border-color:var(--accent);}
+  .day-tab.today .d, .day-tab.today .n{color:var(--accent-contrast);}
+
+  .day-block{margin-bottom:16px;}
+  .day-block .day-heading{
+    display:flex;align-items:baseline;gap:8px;margin-bottom:8px;
+  }
+  .day-heading .dname{font-size:0.82rem;font-weight:700;}
+  .day-heading .ddate{font-size:0.72rem;color:var(--text-faint);}
+  .day-heading .dtag{
+    margin-left:auto;font-size:0.62rem;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);padding:2px 7px;border-radius:20px;
+  }
+  .task-chip-row{display:flex;flex-wrap:wrap;gap:6px;}
+  .task-chip{
+    display:flex;align-items:center;gap:6px;background:var(--surface-alt);
+    border:1px solid var(--border);border-radius:20px;padding:4px 10px 4px 4px;font-size:0.72rem;
+  }
+  .task-chip .avatar{width:18px;height:18px;font-size:0.55rem;}
+
+  /* roommates */
+  .balance-card{margin-bottom:16px;}
+  .balance-card .row{margin-top:0;}
+  .balance-bar-track{
+    height:8px;border-radius:6px;background:var(--surface);overflow:hidden;margin-top:8px;
+    display:flex;border:1px solid var(--border);
+  }
+  .balance-bar-seg{height:100%;}
+
+  .person-card{padding-bottom:12px;}
+  .person-card .top-row{display:flex;align-items:center;gap:11px;}
+  .person-card .stat{margin-left:auto;text-align:right;}
+  .person-card .stat .num{font-size:0.95rem;font-weight:700;}
+  .person-card .stat .lbl{font-size:0.62rem;color:var(--text-faint);}
+  .load-track{height:6px;border-radius:4px;background:var(--surface);margin-top:10px;overflow:hidden;border:1px solid var(--border);}
+  .load-fill{height:100%;border-radius:4px;}
+  .off-chips{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;}
+  .off-chip{font-size:0.62rem;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);padding:2px 7px;border-radius:20px;}
+
+  /* chore setup */
+  .setup-row{display:flex;align-items:center;gap:12px;}
+  .setup-row .grow .name{font-size:0.85rem;}
+  .setup-row .grow .meta{margin-top:3px;}
+  .chevron{color:var(--text-faint);flex:none;}
+  .chevron svg{width:16px;height:16px;}
+  .add-fab{
+    position:absolute;bottom:78px;right:18px;width:46px;height:46px;border-radius:50%;
+    background:var(--accent);color:var(--accent-contrast);display:flex;align-items:center;justify-content:center;
+    box-shadow:var(--shadow);
+  }
+  .add-fab svg{width:20px;height:20px;}
+  .global-row{display:flex;justify-content:space-between;align-items:center;padding:10px 2px;font-size:0.78rem;}
+  .global-row .val{color:var(--text-muted);}
+
+  /* bottom nav */
+  .bottom-nav{
+    flex:none;display:flex;justify-content:space-around;align-items:center;
+    padding:8px 6px 4px;background:var(--nav-bg);border-top:1px solid var(--border);
+  }
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--text-faint);}
+  .nav-item svg{width:20px;height:20px;}
+  .nav-item span{font-size:0.6rem;font-weight:600;}
+  .nav-item.active{color:var(--accent);}
+  .home-indicator{width:110px;height:4px;border-radius:3px;background:var(--text-faint);opacity:0.4;margin:6px auto 8px;}
+
+  @media (max-width:720px){
+    .wrap{padding:24px 16px 40px;}
+  }
+
+  .section-divider{
+    margin:38px 0 6px;padding-top:24px;border-top:1px solid var(--border);
+  }
+  .section-divider h2{margin:0 0 4px;font-size:1.1rem;letter-spacing:-0.01em;}
+  .section-divider p{margin:0;color:var(--text-muted);font-size:0.85rem;max-width:640px;line-height:1.5;}
+
+  /* ---- calendar option B: grid ---- */
+  .grid-cal{display:grid;grid-template-columns:38px repeat(7,1fr);gap:3px;}
+  .gc-head, .gc-cell, .gc-label{display:flex;align-items:center;justify-content:center;}
+  .gc-head{flex-direction:column;padding:5px 0;border-radius:8px;font-size:0.6rem;color:var(--text-faint);}
+  .gc-head .n{font-size:0.74rem;font-weight:700;color:var(--text);margin-top:1px;}
+  .gc-head.today{background:var(--accent);}
+  .gc-head.today .n, .gc-head.today{color:var(--accent-contrast);}
+  .gc-label{justify-content:flex-start;font-size:0.62rem;color:var(--text-muted);font-weight:600;padding-right:2px;}
+  .gc-cell{height:30px;border-radius:8px;background:var(--surface-alt);border:1px solid var(--border);}
+  .gc-cell.today-col{border-color:var(--accent);}
+  .gc-row{display:contents;}
+
+  /* ---- calendar option C: agenda / day focus ---- */
+  .week-strip{display:flex;align-items:center;gap:4px;margin-bottom:16px;}
+  .week-strip .arrow{flex:none;color:var(--text-faint);padding:4px;}
+  .week-strip .arrow svg{width:16px;height:16px;}
+  .week-strip-days{display:flex;gap:5px;flex:1;justify-content:space-between;}
+  .ws-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;border-radius:10px;}
+  .ws-day .d{font-size:0.58rem;color:var(--text-faint);}
+  .ws-day .n{font-size:0.76rem;font-weight:700;}
+  .ws-day .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:1px;}
+  .ws-day.active{background:var(--accent);}
+  .ws-day.active .d, .ws-day.active .n{color:var(--accent-contrast);}
+  .ws-day.active .dot{background:var(--accent-contrast);}
+  .agenda-heading{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
+  .agenda-heading h3{margin:0;font-size:1rem;}
+  .agenda-heading span{font-size:0.72rem;color:var(--text-faint);}
+</style>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>Chore Scheduler — mobile app mockups</h1>
+    <p>Companion app for the household chore scheduler. The Python backend already does the hard work — six algorithms deciding who does what and when — these screens are the mobile front end for viewing and managing that schedule day to day.</p>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="dot" style="background:var(--alice)"></span>Alice</div>
+    <div class="legend-item"><span class="dot" style="background:var(--bob)"></span>Bob</div>
+    <div class="legend-item"><span class="dot" style="background:var(--carol)"></span>Carol</div>
+    <div class="legend-item"><span class="dot" style="background:var(--dave)"></span>Dave (you)</div>
+  </div>
+
+  <div class="phones-row">
+
+    <!-- ============ SCREEN 1: TODAY ============ -->
+    <div class="phone-col">
+      <p class="phone-label">Today<span>What's due, and who's on it</span></p>
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><div class="icons"><span>••••</span><span>&#9724;</span></div></div>
+
+        <div class="app-header">
+          <div class="title-row">
+            <div>
+              <h2>Good morning</h2>
+              <p class="sub">Wednesday, August 12</p>
+            </div>
+            <div class="avatar" style="background:var(--dave)">D</div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="summary-card">
+            <div class="ring"><div class="ring-inner">3/4</div></div>
+            <div>
+              <h3>3 of 4 tasks done</h3>
+              <p>Mop is still pending today</p>
+            </div>
+          </div>
+
+          <div class="section-title">Your tasks</div>
+          <div class="card">
+            <div class="row">
+              <div class="check done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></div>
+              <div class="icon-badge" style="background:var(--accent-soft)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+              <div class="grow"><div class="name">Dishes</div><div class="meta">Daily · done at 8:12am</div></div>
+              <div class="chip done">Done</div>
+            </div>
+          </div>
+
+          <div class="section-title">Household tasks</div>
+          <div class="card">
+            <div class="row">
+              <div class="check"></div>
+              <div class="icon-badge" style="background:var(--accent-soft)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M7 7l1 12a2 2 0 002 2h4a2 2 0 002-2l1-12"/></svg>
+              </div>
+              <div class="grow"><div class="name">Trash</div><div class="meta">Carol · every 7 days</div></div>
+              <div class="avatar sm" style="background:var(--carol)">C</div>
+            </div>
+            <div class="row">
+              <div class="check done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg></div>
+              <div class="icon-badge" style="background:var(--accent-soft)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h11"/></svg>
+              </div>
+              <div class="grow"><div class="name">Vacuum</div><div class="meta">Alice · every 3 days</div></div>
+              <div class="avatar sm" style="background:var(--alice)">A</div>
+            </div>
+            <div class="row">
+              <div class="check"></div>
+              <div class="icon-badge" style="background:var(--accent-soft)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M12 3v10M8 21l4-4 4 4M6 21h12"/></svg>
+              </div>
+              <div class="grow"><div class="name">Mop</div><div class="meta">Alice · piggybacks on Vacuum</div></div>
+              <div class="avatar sm" style="background:var(--alice)">A</div>
+            </div>
+          </div>
+
+          <div class="section-title">Tomorrow</div>
+          <div class="card" style="margin-bottom:2px;">
+            <div class="row"><div class="grow meta">Dishes only — Bob's turn</div><div class="chip muted">Aug 13</div></div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Today</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg><span>Calendar</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 19c0-2 1.5-4 4-4s3.5 1.6 3.5 4"/></svg><span>Team</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7l1.7 1M18.1 16l1.7 1M4.2 17l1.7-1M18.1 8l1.7-1M3 12h2M19 12h2"/></svg><span>Setup</span></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ============ SCREEN 2: CALENDAR ============ -->
+    <div class="phone-col">
+      <p class="phone-label">Weekly calendar<span>Option A — day list</span></p>
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><div class="icons"><span>••••</span><span>&#9724;</span></div></div>
+
+        <div class="app-header">
+          <div class="title-row">
+            <div><h2>This week</h2><p class="sub">Aug 10 – Aug 16</p></div>
+            <div class="avatar" style="background:var(--dave)">D</div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="day-tabs">
+            <div class="day-tab"><span class="d">Mon</span><span class="n">10</span></div>
+            <div class="day-tab"><span class="d">Tue</span><span class="n">11</span></div>
+            <div class="day-tab today"><span class="d">Wed</span><span class="n">12</span></div>
+            <div class="day-tab"><span class="d">Thu</span><span class="n">13</span></div>
+            <div class="day-tab"><span class="d">Fri</span><span class="n">14</span></div>
+            <div class="day-tab"><span class="d">Sat</span><span class="n">15</span></div>
+            <div class="day-tab"><span class="d">Sun</span><span class="n">16</span></div>
+          </div>
+
+          <div class="day-block">
+            <div class="day-heading"><span class="dname">Wednesday</span><span class="ddate">Aug 12</span><span class="dtag">Today</span></div>
+            <div class="task-chip-row">
+              <div class="task-chip"><div class="avatar" style="background:var(--dave)">D</div>Dishes</div>
+              <div class="task-chip"><div class="avatar" style="background:var(--carol)">C</div>Trash</div>
+              <div class="task-chip"><div class="avatar" style="background:var(--alice)">A</div>Vacuum</div>
+              <div class="task-chip"><div class="avatar" style="background:var(--alice)">A</div>Mop</div>
+            </div>
+          </div>
+
+          <div class="day-block">
+            <div class="day-heading"><span class="dname">Thursday</span><span class="ddate">Aug 13</span></div>
+            <div class="task-chip-row">
+              <div class="task-chip"><div class="avatar" style="background:var(--bob)">B</div>Dishes</div>
+            </div>
+          </div>
+
+          <div class="day-block">
+            <div class="day-heading"><span class="dname">Friday</span><span class="ddate">Aug 14</span></div>
+            <div class="task-chip-row">
+              <div class="task-chip"><div class="avatar" style="background:var(--alice)">A</div>Dishes</div>
+            </div>
+          </div>
+
+          <div class="day-block">
+            <div class="day-heading"><span class="dname">Saturday</span><span class="ddate">Aug 15</span></div>
+            <div class="task-chip-row">
+              <div class="task-chip"><div class="avatar" style="background:var(--carol)">C</div>Dishes</div>
+              <div class="task-chip"><div class="avatar" style="background:var(--dave)">D</div>Vacuum</div>
+            </div>
+          </div>
+
+          <div class="day-block">
+            <div class="day-heading"><span class="dname">Sunday</span><span class="ddate">Aug 16</span></div>
+            <div class="task-chip-row">
+              <div class="task-chip"><div class="avatar" style="background:var(--dave)">D</div>Dishes</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Today</span></div>
+          <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg><span>Calendar</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 19c0-2 1.5-4 4-4s3.5 1.6 3.5 4"/></svg><span>Team</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7l1.7 1M18.1 16l1.7 1M4.2 17l1.7-1M18.1 8l1.7-1M3 12h2M19 12h2"/></svg><span>Setup</span></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ============ SCREEN 3: ROOMMATES & FAIRNESS ============ -->
+    <div class="phone-col">
+      <p class="phone-label">Roommates &amp; fairness<span>Workload balance across the house</span></p>
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><div class="icons"><span>••••</span><span>&#9724;</span></div></div>
+
+        <div class="app-header">
+          <div class="title-row">
+            <div><h2>Household</h2><p class="sub">August · 42 tasks so far</p></div>
+            <div class="avatar" style="background:var(--dave)">D</div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="card balance-card">
+            <div class="row"><div class="grow name">Workload balance</div><div class="chip done">Even</div></div>
+            <div class="balance-bar-track">
+              <div class="balance-bar-seg" style="width:26%;background:var(--alice)"></div>
+              <div class="balance-bar-seg" style="width:24%;background:var(--bob)"></div>
+              <div class="balance-bar-seg" style="width:25%;background:var(--carol)"></div>
+              <div class="balance-bar-seg" style="width:25%;background:var(--dave)"></div>
+            </div>
+            <div class="meta" style="margin-top:8px;">Spread of 1 task across everyone this month</div>
+          </div>
+
+          <div class="section-title">People</div>
+
+          <div class="card person-card">
+            <div class="top-row">
+              <div class="avatar" style="background:var(--alice)">A</div>
+              <div class="grow"><div class="name">Alice</div><div class="meta">No days off</div></div>
+              <div class="stat"><div class="num">11</div><div class="lbl">tasks</div></div>
+            </div>
+            <div class="load-track"><div class="load-fill" style="width:73%;background:var(--alice)"></div></div>
+          </div>
+
+          <div class="card person-card">
+            <div class="top-row">
+              <div class="avatar" style="background:var(--bob)">B</div>
+              <div class="grow"><div class="name">Bob</div><div class="meta">Off Sat &amp; Sun</div></div>
+              <div class="stat"><div class="num">10</div><div class="lbl">tasks</div></div>
+            </div>
+            <div class="load-track"><div class="load-fill" style="width:67%;background:var(--bob)"></div></div>
+            <div class="off-chips"><span class="off-chip">Saturday</span><span class="off-chip">Sunday</span></div>
+          </div>
+
+          <div class="card person-card">
+            <div class="top-row">
+              <div class="avatar" style="background:var(--carol)">C</div>
+              <div class="grow"><div class="name">Carol</div><div class="meta">Off Friday</div></div>
+              <div class="stat"><div class="num">10</div><div class="lbl">tasks</div></div>
+            </div>
+            <div class="load-track"><div class="load-fill" style="width:67%;background:var(--carol)"></div></div>
+            <div class="off-chips"><span class="off-chip">Friday</span></div>
+          </div>
+
+          <div class="card person-card" style="margin-bottom:2px;">
+            <div class="top-row">
+              <div class="avatar" style="background:var(--dave)">D</div>
+              <div class="grow"><div class="name">Dave (you)</div><div class="meta">No days off</div></div>
+              <div class="stat"><div class="num">11</div><div class="lbl">tasks</div></div>
+            </div>
+            <div class="load-track"><div class="load-fill" style="width:73%;background:var(--dave)"></div></div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Today</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg><span>Calendar</span></div>
+          <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 19c0-2 1.5-4 4-4s3.5 1.6 3.5 4"/></svg><span>Team</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7l1.7 1M18.1 16l1.7 1M4.2 17l1.7-1M18.1 8l1.7-1M3 12h2M19 12h2"/></svg><span>Setup</span></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ============ SCREEN 4: CHORE SETUP ============ -->
+    <div class="phone-col">
+      <p class="phone-label">Chore setup<span>Mobile version of config.yml</span></p>
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><div class="icons"><span>••••</span><span>&#9724;</span></div></div>
+
+        <div class="app-header">
+          <div class="title-row">
+            <div><h2>Chores</h2><p class="sub">4 chore groups configured</p></div>
+            <div class="avatar" style="background:var(--dave)">D</div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="section-title">Chore groups</div>
+
+          <div class="card">
+            <div class="setup-row">
+              <div class="icon-badge" style="background:var(--accent-soft)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+              <div class="grow"><div class="name">Dishwashing</div><div class="meta">Every day</div></div>
+              <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="setup-row">
+              <div class="icon-badge" style="background:var(--accent-soft)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M7 7l1 12a2 2 0 002 2h4a2 2 0 002-2l1-12"/></svg>
+              </div>
+              <div class="grow"><div class="name">Trash</div><div class="meta">Every 7 days · ±1 day tolerance</div></div>
+              <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="setup-row">
+              <div class="icon-badge" style="background:var(--accent-soft)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h11"/></svg>
+              </div>
+              <div class="grow"><div class="name">Vacuum</div><div class="meta">Every 3 days · ±1 day tolerance</div></div>
+              <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="setup-row">
+              <div class="icon-badge" style="background:var(--accent-soft)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M12 3v10M8 21l4-4 4 4M6 21h12"/></svg>
+              </div>
+              <div class="grow"><div class="name">Mop</div><div class="meta">Piggybacks on Vacuum · every 2nd time</div></div>
+              <div class="chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+            </div>
+          </div>
+
+          <div class="section-title">Household rules</div>
+          <div class="card" style="margin-bottom:2px;">
+            <div class="global-row"><span>Roommates</span><span class="val">4</span></div>
+            <div class="global-row"><span>Rest buffer</span><span class="val">2 days</span></div>
+            <div class="global-row" style="border-bottom:none;"><span>Planning window</span><span class="val">4 weeks</span></div>
+          </div>
+        </div>
+
+        <div class="add-fab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Today</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg><span>Calendar</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 19c0-2 1.5-4 4-4s3.5 1.6 3.5 4"/></svg><span>Team</span></div>
+          <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7l1.7 1M18.1 16l1.7 1M4.2 17l1.7-1M18.1 8l1.7-1M3 12h2M19 12h2"/></svg><span>Setup</span></div>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+
+  <div class="section-divider">
+    <h2>Weekly calendar — two more layout options</h2>
+    <p>Same week, same data, laid out differently. Option A above reads like a feed; B trades detail for an at-a-glance grid; C is a swipeable single-day agenda anchored to a week strip.</p>
+  </div>
+
+  <div class="phones-row">
+
+    <!-- ============ CALENDAR OPTION B: GRID ============ -->
+    <div class="phone-col">
+      <p class="phone-label">Weekly calendar<span>Option B — grid</span></p>
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><div class="icons"><span>••••</span><span>&#9724;</span></div></div>
+
+        <div class="app-header">
+          <div class="title-row">
+            <div><h2>This week</h2><p class="sub">Aug 10 – Aug 16</p></div>
+            <div class="avatar" style="background:var(--dave)">D</div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="grid-cal" style="margin-bottom:14px;">
+            <div class="gc-head"></div>
+            <div class="gc-head"><span>Mon</span><span class="n">10</span></div>
+            <div class="gc-head"><span>Tue</span><span class="n">11</span></div>
+            <div class="gc-head today"><span>Wed</span><span class="n">12</span></div>
+            <div class="gc-head"><span>Thu</span><span class="n">13</span></div>
+            <div class="gc-head"><span>Fri</span><span class="n">14</span></div>
+            <div class="gc-head"><span>Sat</span><span class="n">15</span></div>
+            <div class="gc-head"><span>Sun</span><span class="n">16</span></div>
+
+            <div class="gc-label">Dishes</div>
+            <div class="gc-cell"><div class="avatar sm" style="background:var(--carol)">C</div></div>
+            <div class="gc-cell"><div class="avatar sm" style="background:var(--alice)">A</div></div>
+            <div class="gc-cell today-col"><div class="avatar sm" style="background:var(--dave)">D</div></div>
+            <div class="gc-cell"><div class="avatar sm" style="background:var(--bob)">B</div></div>
+            <div class="gc-cell"><div class="avatar sm" style="background:var(--alice)">A</div></div>
+            <div class="gc-cell"><div class="avatar sm" style="background:var(--carol)">C</div></div>
+            <div class="gc-cell"><div class="avatar sm" style="background:var(--dave)">D</div></div>
+
+            <div class="gc-label">Trash</div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell today-col"><div class="avatar sm" style="background:var(--carol)">C</div></div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell"></div>
+
+            <div class="gc-label">Vacuum</div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell today-col"><div class="avatar sm" style="background:var(--alice)">A</div></div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell"><div class="avatar sm" style="background:var(--dave)">D</div></div>
+            <div class="gc-cell"></div>
+
+            <div class="gc-label">Mop</div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell today-col"><div class="avatar sm" style="background:var(--alice)">A</div></div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell"></div>
+            <div class="gc-cell"></div>
+          </div>
+
+          <div class="section-title">Wednesday, Aug 12</div>
+          <div class="card">
+            <div class="row"><div class="avatar sm" style="background:var(--dave)">D</div><div class="grow meta">Dishes — Dave</div></div>
+            <div class="row"><div class="avatar sm" style="background:var(--carol)">C</div><div class="grow meta">Trash — Carol</div></div>
+            <div class="row"><div class="avatar sm" style="background:var(--alice)">A</div><div class="grow meta">Vacuum + Mop — Alice</div></div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Today</span></div>
+          <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg><span>Calendar</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 19c0-2 1.5-4 4-4s3.5 1.6 3.5 4"/></svg><span>Team</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7l1.7 1M18.1 16l1.7 1M4.2 17l1.7-1M18.1 8l1.7-1M3 12h2M19 12h2"/></svg><span>Setup</span></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ============ CALENDAR OPTION C: AGENDA / DAY FOCUS ============ -->
+    <div class="phone-col">
+      <p class="phone-label">Weekly calendar<span>Option C — day-focus agenda</span></p>
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><div class="icons"><span>••••</span><span>&#9724;</span></div></div>
+
+        <div class="app-header">
+          <div class="title-row">
+            <div><h2>Calendar</h2><p class="sub">Aug 10 – Aug 16</p></div>
+            <div class="avatar" style="background:var(--dave)">D</div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="week-strip">
+            <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></div>
+            <div class="week-strip-days">
+              <div class="ws-day"><span class="d">Mon</span><span class="n">10</span><span class="dot" style="opacity:0.3"></span></div>
+              <div class="ws-day"><span class="d">Tue</span><span class="n">11</span><span class="dot" style="opacity:0.3"></span></div>
+              <div class="ws-day active"><span class="d">Wed</span><span class="n">12</span><span class="dot"></span></div>
+              <div class="ws-day"><span class="d">Thu</span><span class="n">13</span><span class="dot" style="opacity:0.3"></span></div>
+              <div class="ws-day"><span class="d">Fri</span><span class="n">14</span><span class="dot" style="opacity:0.3"></span></div>
+              <div class="ws-day"><span class="d">Sat</span><span class="n">15</span><span class="dot" style="opacity:0.3"></span></div>
+              <div class="ws-day"><span class="d">Sun</span><span class="n">16</span><span class="dot" style="opacity:0.3"></span></div>
+            </div>
+            <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+          </div>
+
+          <div class="agenda-heading">
+            <h3>Wednesday</h3>
+            <span>4 tasks · swipe for Thu →</span>
+          </div>
+
+          <div class="card">
+            <div class="row">
+              <div class="icon-badge" style="background:var(--accent-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></div>
+              <div class="grow"><div class="name">Dishes</div><div class="meta">Daily</div></div>
+              <div class="avatar sm" style="background:var(--dave)">D</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <div class="icon-badge" style="background:var(--accent-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M7 7l1 12a2 2 0 002 2h4a2 2 0 002-2l1-12"/></svg></div>
+              <div class="grow"><div class="name">Trash</div><div class="meta">Every 7 days</div></div>
+              <div class="avatar sm" style="background:var(--carol)">C</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row">
+              <div class="icon-badge" style="background:var(--accent-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h11"/></svg></div>
+              <div class="grow"><div class="name">Vacuum</div><div class="meta">Every 3 days</div></div>
+              <div class="avatar sm" style="background:var(--alice)">A</div>
+            </div>
+            <div class="row">
+              <div class="icon-badge" style="background:var(--accent-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M12 3v10M8 21l4-4 4 4M6 21h12"/></svg></div>
+              <div class="grow"><div class="name">Mop</div><div class="meta">Piggybacks on Vacuum</div></div>
+              <div class="avatar sm" style="background:var(--alice)">A</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Today</span></div>
+          <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg><span>Calendar</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 19c0-2 1.5-4 4-4s3.5 1.6 3.5 4"/></svg><span>Team</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7l1.7 1M18.1 16l1.7 1M4.2 17l1.7-1M18.1 8l1.7-1M3 12h2M19 12h2"/></svg><span>Setup</span></div>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+</div>
