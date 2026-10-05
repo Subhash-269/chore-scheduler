@@ -17,6 +17,7 @@ Bob is off on weekends and Carol on Fridays. No real names or data.
 | `09-members-invite.png` | Members and an invite code |
 | `10-task-sheet.png` | Task sheet: done, missed, covered, not needed |
 | `11-setup.png` | Setup |
+| `12-requests-day-off.png` | Requests: approve a day off, previewing who covers |
 
 ## Refreshing them
 

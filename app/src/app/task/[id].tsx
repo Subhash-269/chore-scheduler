@@ -15,7 +15,7 @@ import { Btn, Dot, KV, Note, Pill, Pills, Screen, Strike, T, tap, TopBar } from 
 export default function TaskSheet() {
   const { c, personColor } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { household, schedule, statuses, setStatus } = useAppData();
+  const { household, schedule, statuses, setStatus, me } = useAppData();
   const [err, setErr] = useState<string | null>(null);
   const slot = schedule?.slots.find((s) => s.id === id);
   if (!household || !schedule || !slot) return <Screen><TopBar back="Close" /><Note>This task isn’t in the live schedule any more.</Note></Screen>;
@@ -95,6 +95,10 @@ export default function TaskSheet() {
             onPress={() => save({ state: 'skipped' })} />
         </>
       )}
+      {slot.person === me ? (
+        <Btn kind="ghost" small style={{ marginTop: 16 }} title="Ask someone to swap"
+          onPress={() => router.push({ pathname: '/swap/[id]', params: { id: slot.id } })} />
+      ) : null}
       {err ? <Note tone="bad">{err}</Note> : null}
     </Screen>
   );

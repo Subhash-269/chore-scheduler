@@ -27,6 +27,10 @@ bearer token (Authorization: Bearer <token>) from /auth/signup or /auth/login.
     GET    /households/{hid}/schedule           live schedule + strike statuses
     PUT|DELETE /households/{hid}/status/{slot}  strike / miss / cover / skip (or clear)
     GET    /households/{hid}/export/{fmt}       csv | docx | pdf (?token= for plain links)
+
+    POST   /households/{hid}/requests           ask for a day off, or to swap a task
+    GET    /households/{hid}/requests           with cover options / swap impact for pending ones
+    POST   /households/{hid}/requests/{rid}/approve | decline | cancel
 """
 import datetime
 import os
@@ -40,7 +44,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from . import auth, social
+from . import auth, requests_logic, social
 from .db import DB, dumps, loads, now
 from .solver_service import ALGORITHMS, ConfigError, normalize_config, solve, write_state
 
@@ -148,6 +152,21 @@ class PlanRequest(BaseModel):
 
 class PublishRequest(BaseModel):
     algorithm: str
+
+
+class NewRequest(BaseModel):
+    kind: Literal["day_off", "swap"]
+    # day_off
+    date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    roommate: Optional[str] = None      # defaults to your own roommate; admins can ask for anyone
+    # swap: your task, and the other person's task you'd take instead
+    slot_id: Optional[str] = None
+    with_slot_id: Optional[str] = None
+    note: Optional[str] = Field(None, max_length=200)
+
+
+class Decision(BaseModel):
+    cover: Optional[str] = None         # day_off: who takes the affected tasks
 
 
 class Status(BaseModel):
@@ -629,3 +648,151 @@ def export(hid: int, fmt: Literal["csv", "docx", "pdf"], ctx=Depends(member_of))
     except ImportError as e:
         raise HTTPException(501, f"{fmt.upper()} export needs an extra package: {e.name}")
     return FileResponse(out, filename=os.path.basename(out))
+
+
+# ------------------------------------------------------------------ routes: requests
+def _linked_user(hid, roommate):
+    row = db().one("SELECT user_id FROM members WHERE household_id = ? AND roommate = ?", hid, roommate)
+    return row["user_id"] if row else None
+
+
+def _request_row(hid, rid):
+    r = db().one("SELECT * FROM requests WHERE id = ? AND household_id = ?", rid, hid)
+    if not r:
+        raise HTTPException(404, "No such request")
+    return r
+
+
+def _can_decide(hid, ctx, req, payload):
+    """Admins decide days off. Swaps are decided by the other person, or by
+    admins when that roommate has no account yet."""
+    if req["kind"] == "swap":
+        uid = _linked_user(hid, payload["to"])
+        if uid:
+            return ctx["user"]["id"] == uid
+    return ctx["member"]["role"] == "admin"
+
+
+def _request_json(hid, r, ctx):
+    payload = loads(r["payload"])
+    creator = db().one("SELECT name FROM users WHERE id = ?", r["created_by"]) if r["created_by"] else None
+    out = {
+        "id": r["id"], "kind": r["kind"], "status": r["status"], "note": r["note"], **payload,
+        "created_by": creator["name"] if creator else None, "mine": r["created_by"] == ctx["user"]["id"],
+        "created_at": r["created_at"], "decided_at": r["decided_at"], "result": loads(r["result"]),
+        "can_decide": False,
+    }
+    if r["status"] == "pending":
+        schedule, config = _schedule(hid), _config(hid).model_dump()
+        out["can_decide"] = _can_decide(hid, ctx, r, payload)
+        if r["kind"] == "day_off":
+            out["preview"] = requests_logic.day_off_options(schedule, config, payload["roommate"], payload["date"])
+        else:
+            out["preview"] = requests_logic.swap_check(schedule, config, payload["slot_id"], payload["with_slot_id"])
+    return out
+
+
+@app.post("/households/{hid}/requests")
+def create_request(hid: int, body: NewRequest, ctx=Depends(member_of)):
+    m = ctx["member"]
+    config = _config(hid).model_dump()
+    if body.kind == "day_off":
+        if not body.date:
+            raise HTTPException(422, "Pick a date")
+        roommate = body.roommate or m["roommate"]
+        if not roommate:
+            raise HTTPException(422, "Link your account to a roommate first (Settings, You are)")
+        if roommate not in config["roommates"]:
+            raise HTTPException(422, f"'{roommate}' isn't one of this household's roommates")
+        if roommate != m["roommate"] and m["role"] != "admin":
+            raise HTTPException(403, "You can only ask for your own days off")
+        if requests_logic.is_off(config, roommate, body.date):
+            raise HTTPException(409, f"{roommate} is already off that day")
+        payload = {"roommate": roommate, "date": body.date}
+    else:
+        if not body.slot_id or not body.with_slot_id:
+            raise HTTPException(422, "Pick both tasks to swap")
+        schedule = _schedule(hid)
+        by_id = {s["id"]: s for s in schedule["slots"]}
+        mine, theirs = by_id.get(body.slot_id), by_id.get(body.with_slot_id)
+        if not mine or not theirs:
+            raise HTTPException(404, "No such task in the live schedule")
+        if mine["person"] != m["roommate"] and m["role"] != "admin":
+            raise HTTPException(403, "You can only offer your own tasks")
+        check = requests_logic.swap_check(schedule, config, body.slot_id, body.with_slot_id)
+        if not check["ok"]:
+            raise HTTPException(422, check["reason"])
+        payload = {"slot_id": body.slot_id, "with_slot_id": body.with_slot_id,
+                   "from": mine["person"], "to": theirs["person"]}
+    with db().tx() as c:
+        rid = c.execute("""INSERT INTO requests (household_id, kind, created_by, payload, note, created_at)
+                           VALUES (?, ?, ?, ?, ?, ?)""",
+                        (hid, body.kind, ctx["user"]["id"], dumps(payload), body.note, now())).lastrowid
+    return _request_json(hid, _request_row(hid, rid), ctx)
+
+
+@app.get("/households/{hid}/requests")
+def list_requests(hid: int, status: Optional[str] = None, ctx=Depends(member_of)):
+    sql = "SELECT * FROM requests WHERE household_id = ?"
+    args = [hid]
+    if status:
+        sql += " AND status = ?"
+        args.append(status)
+    rows = db().all(sql + " ORDER BY created_at DESC LIMIT 50", *args)
+    items = [_request_json(hid, r, ctx) for r in rows]
+    return {"requests": items, "waiting_on_you": sum(1 for i in items if i["can_decide"])}
+
+
+def _pending(hid, rid):
+    r = _request_row(hid, rid)
+    if r["status"] != "pending":
+        raise HTTPException(409, f"This request was already {r['status']}")
+    return r
+
+
+def _decide(hid, rid, ctx, status, result=None):
+    with db().tx() as c:
+        c.execute("UPDATE requests SET status = ?, decided_by = ?, decided_at = ?, result = ? WHERE id = ?",
+                  (status, ctx["user"]["id"], now(), dumps(result) if result is not None else None, rid))
+    return _request_json(hid, _request_row(hid, rid), ctx)
+
+
+@app.post("/households/{hid}/requests/{rid}/approve")
+def approve_request(hid: int, rid: int, body: Decision = Decision(), ctx=Depends(member_of)):
+    r = _pending(hid, rid)
+    payload = loads(r["payload"])
+    if not _can_decide(hid, ctx, r, payload):
+        raise HTTPException(403, "You can't decide this one")
+    schedule, cfg = _schedule(hid), _config(hid)
+    new_config = None
+    try:
+        if r["kind"] == "day_off":
+            new_schedule, new_config, changes = requests_logic.apply_day_off(
+                schedule, cfg.model_dump(), payload["roommate"], payload["date"], body.cover)
+            _validate(Household(**new_config))
+        else:
+            new_schedule, changes = requests_logic.apply_swap(
+                schedule, cfg.model_dump(), payload["slot_id"], payload["with_slot_id"])
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+    with db().tx() as c:
+        c.execute("UPDATE households SET schedule = ? WHERE id = ?", (dumps(new_schedule), hid))
+        if new_config is not None:
+            c.execute("UPDATE households SET config = ? WHERE id = ?", (dumps(new_config), hid))
+    return _decide(hid, rid, ctx, "approved", {"changes": changes})
+
+
+@app.post("/households/{hid}/requests/{rid}/decline")
+def decline_request(hid: int, rid: int, ctx=Depends(member_of)):
+    r = _pending(hid, rid)
+    if not _can_decide(hid, ctx, r, loads(r["payload"])):
+        raise HTTPException(403, "You can't decide this one")
+    return _decide(hid, rid, ctx, "declined")
+
+
+@app.post("/households/{hid}/requests/{rid}/cancel")
+def cancel_request(hid: int, rid: int, ctx=Depends(member_of)):
+    r = _pending(hid, rid)
+    if r["created_by"] != ctx["user"]["id"]:
+        raise HTTPException(403, "Only the person who asked can cancel")
+    return _decide(hid, rid, ctx, "cancelled")

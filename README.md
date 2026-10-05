@@ -10,6 +10,7 @@ chore through when it's done, like the paper on the fridge, only shared.
 - **Fair by default:** work is split evenly, with rest days between turns
 - **Fits real life:** days off, chores someone never does, chores that go together (mop every second vacuum)
 - **Shared:** invite roommates with a code; admins set the rules, everyone ticks off
+- **Life happens:** ask for a day off or swap a chore; the app shows who'd cover before anyone approves
 - **Fridge board:** a person-by-day grid you strike through, right on your phone
 
 <table>
@@ -110,7 +111,8 @@ cd app && npx tsc --noEmit && npx expo lint                           # app type
 | 1 | App core: onboarding, planning with preview, Today, fridge board with strikethrough, Setup | done |
 | 2a | Accounts, separate households, invite codes, admin / member roles, account deletion | done |
 | 2b | Sign in with Apple and Google | done; Google turns on once a Google Cloud client is set up |
-| 2c | Requests (day off, swap) with admin preview and approval, push notifications, hosted server | next |
+| 2c | Requests (day off, swap) with admin preview and approval | done |
+| 2d | Push notifications, hosted server | next (needs the Apple membership and a host) |
 | 3 | Solo mode (balance load across days), chores done several times a day, customisation | planned |
 | 4 | Home and lock-screen widgets, Live Activities, kitchen-tablet fridge board, App Store release | planned |
 

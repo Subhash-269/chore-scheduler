@@ -8,7 +8,7 @@ import { Dot, Header, Loading, Row, Screen, Section, T, Tag, TopBar } from '@/ui
 
 export default function Team() {
   const { c, personColor } = useTheme();
-  const { household, schedule, me } = useAppData();
+  const { household, schedule, me, waiting } = useAppData();
   if (!household || !schedule) return <Loading />;
   const m = schedule.metrics;
   const color = (p: string) => personColor(p, household.roommates, household.colors);
@@ -38,6 +38,11 @@ export default function Team() {
           </View>
         </Row>
       ))}
+
+      <Section title="Requests" />
+      <Row chevron onPress={() => router.push('/requests')}
+        right={waiting ? <Tag label={`${waiting} waiting`} tone="inv" /> : undefined}>Days off & swaps</Row>
+      <Row chevron end onPress={() => router.push('/day-off')}>Ask for a day off</Row>
 
       <Section title="Fairness" />
       <Row right={`${m.workload_spread} task${m.workload_spread === 1 ? '' : 's'}`}>Workload spread</Row>

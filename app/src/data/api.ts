@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-import type { Household, PlanJob, Schedule, TaskStatus } from './types';
+import type { Household, PlanJob, Schedule, Slot, TaskStatus } from './types';
 
 const URL_KEY = 'chores.serverUrl';
 const TOKEN_KEY = 'chores.token';
@@ -127,6 +127,30 @@ export type Membership = { id: number; name: string; role: 'admin' | 'member'; r
 export type Member = { id: number; name: string; email: string; role: 'admin' | 'member'; roommate: string | null; joined_at: number };
 export type Invite = { code: string; role: 'admin' | 'member'; expires_at: number };
 
+export type CoverOption = {
+  person: string; rest_before: number | null; rest_after: number | null; short_rest: boolean;
+  totals_before: Record<string, number>; totals_after: Record<string, number>;
+  spread_before: number; spread_after: number;
+  changes: { slot_id: string; date: string; task: string; from: string; to: string }[];
+};
+export type ChoreRequest = {
+  id: number; kind: 'day_off' | 'swap'; status: 'pending' | 'approved' | 'declined' | 'cancelled';
+  note: string | null; created_by: string | null; mine: boolean; can_decide: boolean;
+  created_at: number; decided_at: number | null;
+  // day_off
+  roommate?: string; date?: string;
+  // swap
+  slot_id?: string; with_slot_id?: string; from?: string; to?: string;
+  result?: { changes: CoverOption['changes'] } | null;
+  preview?: {
+    // day_off
+    affected?: Slot[]; options?: CoverOption[]; blocked?: { person: string; reason: string }[];
+    // swap
+    ok?: boolean; reason?: string | null;
+    impact?: Record<string, { rest_before: number | null; rest_after: number | null; short_rest: boolean }>;
+  };
+};
+
 export const api = {
   health: () => call<{ ok: boolean; version: string; algorithms: string[] }>('GET', '/health', undefined, 5000),
 
@@ -187,6 +211,15 @@ export const api = {
   getSchedule: async () => call<{ schedule: Schedule; statuses: Record<string, TaskStatus> }>('GET', await hh('/schedule')),
   putStatus: async (slotId: string, s: TaskStatus) => call<TaskStatus>('PUT', await hh(`/status/${encodeURIComponent(slotId)}`), s),
   clearStatus: async (slotId: string) => call<{ ok: boolean }>('DELETE', await hh(`/status/${encodeURIComponent(slotId)}`)),
+  requests: async (status?: 'pending') =>
+    call<{ requests: ChoreRequest[]; waiting_on_you: number }>('GET', await hh(`/requests${status ? `?status=${status}` : ''}`)),
+  askDayOff: async (date: string, note?: string, roommate?: string) =>
+    call<ChoreRequest>('POST', await hh('/requests'), { kind: 'day_off', date, note, roommate }),
+  askSwap: async (slot_id: string, with_slot_id: string, note?: string) =>
+    call<ChoreRequest>('POST', await hh('/requests'), { kind: 'swap', slot_id, with_slot_id, note }),
+  approve: async (id: number, cover?: string) => call<ChoreRequest>('POST', await hh(`/requests/${id}/approve`), { cover }),
+  decline: async (id: number) => call<ChoreRequest>('POST', await hh(`/requests/${id}/decline`)),
+  cancelRequest: async (id: number) => call<ChoreRequest>('POST', await hh(`/requests/${id}/cancel`)),
   exportUrl: async (fmt: 'csv' | 'docx' | 'pdf') =>
     `${await getServerUrl()}${await hh(`/export/${fmt}`)}?token=${encodeURIComponent((await getToken()) ?? '')}`,
 };

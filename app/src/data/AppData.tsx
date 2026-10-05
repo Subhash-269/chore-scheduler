@@ -29,6 +29,8 @@ type AppDataValue = {
   warnings: string[];
   schedule: Schedule | null;
   statuses: Record<string, TaskStatus>;
+  /** requests waiting on this account (day-off approvals, swaps offered to you) */
+  waiting: number;
   /** which roommate this account is in the current household */
   me: string | null;
   setMe: (name: string | null) => Promise<void>;
@@ -56,6 +58,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [statuses, setStatuses] = useState<Record<string, TaskStatus>>({});
+  const [waiting, setWaiting] = useState(0);
   const [draft, setDraft] = useState<Household | null>(null);
   // "you" picked during onboarding, before the household is saved
   const [pendingMe, setPendingMe] = useState<string | null>(null);
@@ -119,6 +122,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setSchedule(s.schedule);
       setStatuses(s.statuses);
       setPhase('ready');
+      api.requests('pending').then((r) => setWaiting(r.waiting_on_you)).catch(() => {});
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
         setSchedule(null);
@@ -204,9 +208,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppDataValue>(() => ({
     phase, error, user, memberships, membership, isAdmin: membership?.role === 'admin',
-    household, warnings, schedule, statuses, me, setMe, refresh, selectHousehold, signOut,
+    household, warnings, schedule, statuses, waiting, me, setMe, refresh, selectHousehold, signOut,
     saveHousehold, setStatus, cycleStatus, draft, setDraft,
-  }), [phase, error, user, memberships, membership, household, warnings, schedule, statuses, me, setMe, refresh,
+  }), [phase, error, user, memberships, membership, household, warnings, schedule, statuses, waiting, me, setMe, refresh,
     selectHousehold, signOut, saveHousehold, setStatus, cycleStatus, draft]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

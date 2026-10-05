@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -107,6 +107,8 @@ export default function Person() {
             );
           })}
           {(household.exclusions[name] ?? []).length ? <Note>Excluded chores don’t count as unfair: averages use eligible people only.</Note> : null}
+
+          {me === name ? <Btn kind="ghost" small style={{ marginTop: 18 }} title="Ask for a day off" onPress={() => router.push('/day-off')} /> : null}
 
           <Section title="Up next" />
           {upNext.length ? upNext.map((s) => (

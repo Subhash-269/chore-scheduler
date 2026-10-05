@@ -70,6 +70,21 @@ CREATE TABLE IF NOT EXISTS invites (
     used_by      INTEGER REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- Day-off and swap requests, decided by admins (day off) or the other person (swap)
+CREATE TABLE IF NOT EXISTS requests (
+    id           INTEGER PRIMARY KEY,
+    household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+    kind         TEXT NOT NULL CHECK (kind IN ('day_off', 'swap')),
+    created_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    payload      TEXT NOT NULL,   -- day_off: {roommate, date}; swap: {slot_id, with_slot_id}
+    note         TEXT,
+    status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'declined', 'cancelled')),
+    decided_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    decided_at   REAL,
+    result       TEXT,            -- what changed on approval
+    created_at   REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS statuses (
     household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
     slot_id      TEXT NOT NULL,
