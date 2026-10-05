@@ -38,6 +38,45 @@ where you can type the address, or set `EXPO_PUBLIC_API_URL` before
 
 Browser preview: `npx expo start --web`.
 
+## Development build
+
+Expo Go can't run Sign in with Google, push notifications or widgets, so the
+app also ships as its own **development build**, built in the cloud with EAS
+(no Mac needed).
+
+| Platform | Needs |
+|---|---|
+| Android phone | a free Expo account |
+| iPhone | a **paid Apple Developer account** (Apple requires it to sign any build that runs on a device), and the phone registered once |
+| iOS Simulator | a Mac |
+
+One-time setup, in `app/`:
+
+```sh
+npx eas-cli@latest login          # same Expo account as Expo Go
+npx eas-cli@latest init           # links the project to your account (adds a projectId to app.json)
+npx eas-cli@latest device:create  # iPhone only: register your phone (opens a link on the phone)
+```
+
+Build and install:
+
+```sh
+npx eas-cli@latest build --profile development --platform ios       # or --platform android
+```
+
+When it finishes, open the link or QR code it prints on your phone to install.
+iPhones also need **Developer Mode** turned on (Settings → Privacy & Security).
+
+Day to day, start Metro as usual and open the app you installed, not Expo Go:
+
+```sh
+npx expo start                    # serves the development build
+npx expo start --go               # still serves Expo Go, if you need it
+```
+
+Only native changes (a new library with native code, or `app.json` plugins)
+need a new build. JavaScript changes load live, as they do in Expo Go.
+
 ## What's in the app
 
 - Accounts: email + password, Sign in with Apple, Google (in builds that are set up for it)
