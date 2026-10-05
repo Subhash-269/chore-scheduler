@@ -7,7 +7,7 @@
 # one that's actually tracked in git, so the schema is never
 # lost even though your real config never gets committed.
 #
-#   cp config.example.yml config.yml
+#   cp config_example.yml config.yml
 # =========================================================
 
 roommates:
@@ -71,6 +71,38 @@ days_off:
   Bob: ["Saturday", "Sunday"]
   Carol: ["Friday"]
   Dave: []
+
+# Per-person chore exclusions - "this person NEVER does this chore".
+# Different from days_off: days_off is about WHEN someone can work, this is
+# about WHAT they can be handed, on any day at all.
+#
+# Each entry is a list of either:
+#   - a chore GROUP name, e.g. "Dishwashing" -> every task in that group
+#   - a single TASK name,  e.g. "Dishes"      -> just that one task
+# (in this example config each group happens to hold a single task, so
+# the two forms coincide - they differ once a group lists several tasks)
+# Leave the list empty ([]) for someone who can do everything.
+# Unknown names are rejected at startup, so a typo can't silently do nothing.
+#
+# This is a HARD rule: all 6 algorithms treat an excluded person as not a
+# candidate for that chore at all, and the validator re-checks it afterwards.
+# Keep enough people eligible - a chore firing every N days with a
+# buffer_days rest window needs at least ceil((buffer_days + 1) / N)
+# eligible people, or you'll get buffer violations (startup warns you).
+exclusions:
+  Alice: []
+  Bob: []
+  Carol: []
+  Dave: []
+
+# Seed for the roommate-order shuffle. List order is a genuine tie-breaker:
+# among equally-good schedules the solver resolves ties toward whoever comes
+# first, so a fixed order would quietly favour the same people every month.
+#   <integer>  reproducible - same config in, same schedule out
+#   auto       fresh shuffle every run (the seed used is printed, and saved
+#              into schedule_state.json so a run can be reproduced later)
+# Bump the integer whenever you want a different-but-repeatable rotation.
+random_seed: 42
 
 # Planning window
 start_day: "2026-01-01"

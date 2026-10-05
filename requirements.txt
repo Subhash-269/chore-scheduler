@@ -1,0 +1,5 @@
+numpy
+scipy>=1.9      # scipy.optimize.milp (HiGHS)
+pyyaml
+python-docx     # DOCX export (optional - skipped if missing)
+reportlab       # PDF export (optional - skipped if missing)

@@ -2,8 +2,9 @@
 
 An automated household chore scheduler that assigns *who* does *what* on
 *which day*, while respecting rest requirements, chore frequencies, days
-off, and fairness — solved and cross-checked by **six different
-algorithms**, so you can see the tradeoffs instead of trusting a black box.
+off, per-person chore exclusions, and fairness — solved and cross-checked
+by **six different algorithms**, so you can see the tradeoffs instead of
+trusting a black box.
 
 ```
 config.yml  --->  optimizer.py  --->  scheduler.py  --->  main.py
@@ -23,9 +24,10 @@ not just know it worked here.
 Every day, some chores are "due" (dishes daily, sweeping every 3 days,
 stove-cleaning every 10 days, and mopping riding along on every 2nd sweep
 day). Five people need to split these tasks so that: no one works two
-chores the same day, no one is assigned on their day off, no one gets less
-rest between tasks than the buffer requires, and the workload — both total
-tasks and each specific chore type — is spread evenly. On top of that, the
+chores the same day, no one is assigned on their day off, no one is ever
+handed a chore they're excluded from, no one gets less rest between tasks
+than the buffer requires, and the workload — both total tasks and each
+specific chore type — is spread evenly. On top of that, the
 schedule should ideally **continue smoothly** from the previous month
 instead of resetting every time.
 
@@ -79,15 +81,24 @@ flowchart TD
   picks it).
 - **Hard constraints**: each chore fires exactly once per its frequency
   window; a person works at most one task per day; days off are never
-  violated; a "piggyback" chore (Mop) lands on the exact day its host
-  chore (Sweep/Trash) was assigned, every Nth time.
+  violated; a person is never given a chore they're excluded from; a
+  "piggyback" chore (Mop) lands on the exact day its host chore
+  (Sweep/Trash) was assigned, every Nth time. Days off and exclusions both
+  just pin the matching `x[slot, person]` variable to 0 — the difference is
+  that a day off kills one day's variables while an exclusion kills that
+  person's variables for that chore across the whole horizon.
 - **Soft constraints** (minimized, not forbidden): the rest buffer between
-  tasks, and cadence (how evenly spaced occurrences are) — both solved in
-  two phases: first minimize *how many* rules must bend, then, having
-  locked that minimum in, optimize fairness among all schedules that
-  achieve it. This avoids a single blended objective with wildly different
-  weight scales, which is a classic way to make a solver numerically
-  unstable.
+  tasks, and cadence (how evenly spaced occurrences are) — solved in three
+  staged phases, each one capping the previous phase's result and then
+  optimizing the next objective underneath it:
+  1. minimize *how many* rules must bend (buffer + cadence),
+  2. lock that in, then equalize **total** task counts per person,
+  3. lock *that* in, then equalize each **individual chore** across the
+     people eligible for it.
+  Staging avoids a single blended objective with wildly different weight
+  scales — a classic way to make a solver numerically unstable, and
+  (see §12) a good way to make it silently pick a trade-off you never
+  agreed to.
 - **Result**: the only one of the six algorithms with a genuine
   optimality *guarantee* — when it says "2 unavoidable exceptions", that's
   proven to be the true minimum, not just the best it happened to find.
@@ -355,13 +366,20 @@ All six algorithms' outputs (after polishing) are ranked by, in order:
    of how good its other numbers look.
 2. **Buffer violations** — how many times the rest requirement had to
    bend.
-3. **Rest-balance spread** — how far apart the *least* and *most* rested
+3. **Workload spread** — total task count balance, the headline "did we
+   all do the same amount of work" number.
+4. **Rest-balance spread** — how far apart the *least* and *most* rested
    person's average rest is. (This used to be completely missing from
    the ranking — a schedule could win by tying on violations and winning
    a later tiebreaker that had nothing to do with actual rest fairness.)
-4. **Per-chore fairness spread** — does everyone get a fair share of
-   *each* chore type, not just a fair total count.
-5. **Overall fairness spread** — total task count balance.
+5. **Per-chore fairness spread** — does everyone get a fair share of
+   *each* chore type, counted only over the people eligible for it.
+
+This is deliberately the *same* priority order the MILP optimizes
+internally, so the ranking can't overrule the solver's own trade-off.
+Workload spread used to sit dead last, behind per-chore spread — which
+let a schedule with totals of 12,12,12,12,11,4,4 beat one with
+10,10,10,10,10,9,9 on per-chore evenness alone.
 
 You can also interactively switch between any of the six schedules before
 committing to one — the ranking is a recommendation, not a lock-in.
@@ -384,6 +402,13 @@ month doesn't reset everything to zero:
   forward, so fairness is judged across the *whole history*, not just
   this one run in isolation.
 
+Carry-over is only applied if the previous run actually **finished before**
+this one starts. A `schedule_state.json` dated at or after `start_day`
+(usually a `start_day` that was never moved forward) is reported and
+ignored rather than used — otherwise every person appears to owe rest from
+the future, which the solver dutifully reports as a pile of phantom
+"unavoidable" buffer exceptions while quietly skewing every other number.
+
 If MILP goes infeasible on a continuation run, `diagnose_milp_infeasibility`
 automatically re-solves with each of these three carry-overs isolated, to
 tell you exactly which one is responsible — instead of just failing
@@ -391,7 +416,97 @@ silently.
 
 ---
 
-## 11. Validation
+## 11. Per-person chore exclusions
+
+Some chores just shouldn't go to some people — an allergy, a bad back, a
+sink they can't reach. `config.yml` takes this as a per-person list:
+
+```yaml
+exclusions:
+  Alice: ["Stove"]            # a chore GROUP name - every task in it
+  Bob: ["🪣 Mop"]              # a single TASK name
+  Carol: []                   # can do everything
+```
+
+This is **not** a preference or a soft penalty — it's a hard rule of the
+same class as days off, enforced inside all six algorithms (an excluded
+person never enters that chore's candidate pool) and re-checked afterwards
+by the validator. Where the two differ:
+
+| | days off | exclusions |
+|---|---|---|
+| Restricts | *when* someone can work | *what* they can be given |
+| Scope | specific dates/weekdays | every day in the horizon |
+| Under a forced pick | can bend as a last resort | never bends |
+
+Two things are checked at startup, so a bad config fails loudly instead of
+producing a quietly-wrong schedule:
+
+- A name that matches no chore group or task (a typo) is a **hard error** —
+  an exclusion that silently does nothing is the worst outcome.
+- If a chore is left with too few eligible people to satisfy its own rest
+  buffer — a chore every `N` days needs at least
+  `ceil((buffer_days + 1) / N)` eligible people — you get a **warning**
+  naming the chore and who's left. If *nobody* is left, that's a hard error.
+
+---
+
+## 12. Two kinds of fair, and which one wins
+
+Exclusions expose a conflict that doesn't exist when everyone can do
+everything. Say Dishes are daily — 42 of the 68 tasks in a 6-week window —
+and two people are excluded from them. Those two can only draw from the
+other 26 slots, so:
+
+- **Equal totals** means they must take a *disproportionate* share of the
+  sweeping, mopping and stove-cleaning to catch up.
+- **Equal share of each chore** means every chore splits evenly among
+  whoever's eligible, and those two simply end the month with less work.
+
+You cannot have both. Measured on exactly that config:
+
+| priority | totals | per-chore spread |
+|---|---|---|
+| per-chore first *(old behaviour)* | 12,12,12,12,11,**4,4** | 3 |
+| **totals first** *(current)* | 10,10,10,10,10,**9,9** | 9 |
+
+This project picks **equal totals first**, then evens out individual
+chores among the schedules that keep those totals. The consequence is
+visible and intended: whoever is excluded from a frequent chore will do
+noticeably more of the other ones.
+
+That priority is applied in three places that must agree, or the ranking
+ends up overruling the solver: the MILP's staged objective (§2), the
+heuristics' score function, and the winner ranking (§9).
+
+One subtlety worth stating: **an excluded person's zero never counts as
+unfairness.** Per-chore spread is measured only over eligible people. If
+it weren't, "Bob did 0 of 42 Dishes" would read as a spread of 9, and
+the optimizer would try to close that gap the only way it could — by
+starving everyone else of dishes too.
+
+---
+
+## 13. Randomized roommate order
+
+List order is a real tie-breaker, not cosmetics: among equally-optimal
+schedules, MILP's variable order and greedy/Hungarian's `max()`/`argmax()`
+all resolve ties toward whoever appears first, so a fixed order quietly
+favours the same people every month (measured: it decides who lands on 9
+tasks instead of 10). Each run shuffles the list the solvers see:
+
+```yaml
+random_seed: 42      # reproducible - same config in, same schedule out
+# random_seed: auto  # fresh shuffle every run; the seed used is printed
+#                    # and saved into schedule_state.json
+```
+
+Reports and exports still use the config order, so runs stay comparable
+side by side.
+
+---
+
+## 14. Validation
 
 Every winning schedule is independently re-checked from scratch — not
 trusted just because a solver said "optimal":
@@ -402,6 +517,7 @@ trusted just because a solver said "optimal":
 - Piggyback chores land within tolerance of their host's actual chosen
   day, specifically on every Nth occurrence.
 - Nobody is ever assigned on a day off.
+- Nobody is ever given a chore they're excluded from.
 
 This is the same class of check a human would do by hand — re-derived
 independently, not just reading back the solver's own internal state.
@@ -412,7 +528,7 @@ independently, not just reading back the solver's own internal state.
 
 | File | Contains |
 |---|---|
-| `config.yml` | Roommates, chore frequencies/tolerances, buffer days, days off, planning window |
+| `config.yml` | Roommates, chore frequencies/tolerances, buffer days, days off, per-person chore exclusions, randomization seed, planning window |
 | `optimizer.py` | All 6 algorithms, shared scoring/validity helpers, the polish layer |
 | `scheduler.py` | Config/state I/O, calendar, human-readable reporting, validation, CSV/DOCX/PDF export |
 | `main.py` | Orchestration only — run this: `python main.py` |
