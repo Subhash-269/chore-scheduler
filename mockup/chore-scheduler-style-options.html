@@ -1,0 +1,792 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chore Scheduler Options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f3f4f7;
+    --surface:#ffffff;
+    --surface-alt:#eef0f4;
+    --border:#e2e5eb;
+    --text:#1a1d24;
+    --text-muted:#6b7280;
+    --text-faint:#9aa0ab;
+    --accent:#6d4cf0;
+    --accent-soft:#efe9ff;
+    --accent-contrast:#ffffff;
+    --shadow:0 10px 30px rgba(20,22,30,0.12), 0 2px 6px rgba(20,22,30,0.08);
+    --shadow-sm:0 1px 3px rgba(20,22,30,0.08);
+    --bezel:#111318;
+    --nav-bg:#ffffff;
+    --success:#0f9d6a;
+    --danger:#e0345a;
+
+    --alice:#3b5bdb;
+    --bob:#c2570c;
+    --carol:#b0245c;
+    --dave:#0a8f66;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#111317;
+      --surface:#1b1e24;
+      --surface-alt:#22262e;
+      --border:#31363f;
+      --text:#f1f2f5;
+      --text-muted:#a2a8b3;
+      --text-faint:#787f8b;
+      --accent:#a68bff;
+      --accent-soft:rgba(166,139,255,0.16);
+      --accent-contrast:#151225;
+      --shadow:0 10px 30px rgba(0,0,0,0.5);
+      --shadow-sm:none;
+      --bezel:#05060a;
+      --nav-bg:#1b1e24;
+
+      --alice:#5b7cff;
+      --bob:#e0812f;
+      --carol:#d8558c;
+      --dave:#1cb381;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111317;
+    --surface:#1b1e24;
+    --surface-alt:#22262e;
+    --border:#31363f;
+    --text:#f1f2f5;
+    --text-muted:#a2a8b3;
+    --text-faint:#787f8b;
+    --accent:#a68bff;
+    --accent-soft:rgba(166,139,255,0.16);
+    --accent-contrast:#151225;
+    --shadow:0 10px 30px rgba(0,0,0,0.5);
+    --shadow-sm:none;
+    --bezel:#05060a;
+    --nav-bg:#1b1e24;
+
+    --alice:#5b7cff;
+    --bob:#e0812f;
+    --carol:#d8558c;
+    --dave:#1cb381;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    margin:0;
+  }
+  .wrap{max-width:1400px;margin:0 auto;padding:36px 28px 56px;}
+
+  .page-head{margin-bottom:20px;}
+  .page-head h1{font-size:1.5rem;margin:0 0 6px;letter-spacing:-0.01em;}
+  .page-head p{margin:0;color:var(--text-muted);font-size:0.92rem;max-width:640px;line-height:1.5;}
+
+  .legend{
+    display:flex;flex-wrap:wrap;gap:14px;margin:18px 0 32px;
+    padding:12px 16px;background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;
+  }
+  .legend-item{display:flex;align-items:center;gap:7px;font-size:0.82rem;color:var(--text-muted);}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none;}
+
+  .phones-row{
+    display:flex;gap:28px;overflow-x:auto;padding:6px 6px 18px;
+    scroll-snap-type:x proximity;
+  }
+  .phone-col{flex:none;width:300px;scroll-snap-align:start;}
+  .phone-label{margin:0 0 12px;font-size:0.95rem;font-weight:600;}
+  .phone-label span{display:block;font-weight:400;color:var(--text-muted);font-size:0.78rem;margin-top:2px;}
+
+  .phone{
+    width:300px;height:640px;border-radius:38px;background:var(--bezel);
+    padding:10px;box-shadow:var(--shadow);
+  }
+  .screen{
+    width:100%;height:100%;background:var(--surface);border-radius:30px;
+    overflow:hidden;display:flex;flex-direction:column;position:relative;
+  }
+  .statusbar{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 20px 2px;font-size:0.72rem;font-weight:600;color:var(--text);
+    flex:none;
+  }
+  .statusbar .icons{display:flex;align-items:center;gap:4px;}
+
+  .app-header{padding:6px 18px 12px;flex:none;}
+  .app-header .title-row{display:flex;justify-content:space-between;align-items:flex-start;}
+  .app-header h2{margin:0;font-size:1.15rem;letter-spacing:-0.01em;}
+  .app-header .sub{margin:2px 0 0;font-size:0.78rem;color:var(--text-muted);}
+
+  .avatar{
+    width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:0.68rem;font-weight:700;color:#fff;flex:none;
+  }
+  .avatar.sm{width:22px;height:22px;font-size:0.6rem;}
+
+  .content{flex:1;overflow-y:auto;padding:2px 18px 10px;}
+  .content::-webkit-scrollbar{display:none;}
+
+  .icon-badge{
+    width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .icon-badge svg{width:18px;height:18px;}
+
+  /* ---- shared cards ---- */
+  .card{
+    background:var(--surface-alt);border:1px solid var(--border);border-radius:14px;
+    padding:12px 14px;margin-bottom:10px;
+  }
+  .row{display:flex;align-items:center;gap:11px;}
+  .row + .row{margin-top:9px;}
+  .grow{flex:1;min-width:0;}
+  .name{font-size:0.86rem;font-weight:600;}
+  .meta{font-size:0.72rem;color:var(--text-muted);margin-top:1px;}
+  .chip{
+    font-size:0.66rem;font-weight:600;padding:3px 8px;border-radius:20px;
+    background:var(--accent-soft);color:var(--accent);flex:none;
+  }
+  .chip.done{background:rgba(15,157,106,0.14);color:var(--success);}
+  .chip.muted{background:var(--surface);color:var(--text-faint);border:1px solid var(--border);}
+
+  .check{
+    width:24px;height:24px;border-radius:50%;border:2px solid var(--border);flex:none;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .check.done{background:var(--success);border-color:var(--success);}
+  .check svg{width:12px;height:12px;color:#fff;}
+
+  .section-title{
+    font-size:0.7rem;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;
+    color:var(--text-faint);margin:16px 0 8px;
+  }
+  .section-title:first-child{margin-top:4px;}
+
+  /* summary ring card (Today) */
+  .summary-card{
+    background:linear-gradient(135deg,var(--accent),var(--accent) 60%,var(--accent));
+    border-radius:16px;padding:16px;color:var(--accent-contrast);margin-bottom:14px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .ring{
+    width:52px;height:52px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    background:conic-gradient(#fff 0deg 270deg, rgba(255,255,255,0.28) 270deg 360deg);
+  }
+  .ring-inner{
+    width:40px;height:40px;border-radius:50%;background:var(--accent);
+    display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;
+  }
+  .summary-card h3{margin:0 0 3px;font-size:0.95rem;}
+  .summary-card p{margin:0;font-size:0.74rem;opacity:0.88;}
+
+  /* calendar */
+  .day-tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;}
+  .day-tab{
+    flex:none;width:38px;padding:7px 0;border-radius:10px;text-align:center;
+    background:var(--surface-alt);border:1px solid var(--border);
+  }
+  .day-tab .d{font-size:0.62rem;color:var(--text-faint);display:block;}
+  .day-tab .n{font-size:0.8rem;font-weight:700;display:block;margin-top:2px;}
+  .day-tab.today{background:var(--accent);border-color:var(--accent);}
+  .day-tab.today .d, .day-tab.today .n{color:var(--accent-contrast);}
+
+  .day-block{margin-bottom:16px;}
+  .day-block .day-heading{
+    display:flex;align-items:baseline;gap:8px;margin-bottom:8px;
+  }
+  .day-heading .dname{font-size:0.82rem;font-weight:700;}
+  .day-heading .ddate{font-size:0.72rem;color:var(--text-faint);}
+  .day-heading .dtag{
+    margin-left:auto;font-size:0.62rem;font-weight:700;color:var(--accent);
+    background:var(--accent-soft);padding:2px 7px;border-radius:20px;
+  }
+  .task-chip-row{display:flex;flex-wrap:wrap;gap:6px;}
+  .task-chip{
+    display:flex;align-items:center;gap:6px;background:var(--surface-alt);
+    border:1px solid var(--border);border-radius:20px;padding:4px 10px 4px 4px;font-size:0.72rem;
+  }
+  .task-chip .avatar{width:18px;height:18px;font-size:0.55rem;}
+
+  /* roommates */
+  .balance-card{margin-bottom:16px;}
+  .balance-card .row{margin-top:0;}
+  .balance-bar-track{
+    height:8px;border-radius:6px;background:var(--surface);overflow:hidden;margin-top:8px;
+    display:flex;border:1px solid var(--border);
+  }
+  .balance-bar-seg{height:100%;}
+
+  .person-card{padding-bottom:12px;}
+  .person-card .top-row{display:flex;align-items:center;gap:11px;}
+  .person-card .stat{margin-left:auto;text-align:right;}
+  .person-card .stat .num{font-size:0.95rem;font-weight:700;}
+  .person-card .stat .lbl{font-size:0.62rem;color:var(--text-faint);}
+  .load-track{height:6px;border-radius:4px;background:var(--surface);margin-top:10px;overflow:hidden;border:1px solid var(--border);}
+  .load-fill{height:100%;border-radius:4px;}
+  .off-chips{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;}
+  .off-chip{font-size:0.62rem;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);padding:2px 7px;border-radius:20px;}
+
+  /* chore setup */
+  .setup-row{display:flex;align-items:center;gap:12px;}
+  .setup-row .grow .name{font-size:0.85rem;}
+  .setup-row .grow .meta{margin-top:3px;}
+  .chevron{color:var(--text-faint);flex:none;}
+  .chevron svg{width:16px;height:16px;}
+  .add-fab{
+    position:absolute;bottom:78px;right:18px;width:46px;height:46px;border-radius:50%;
+    background:var(--accent);color:var(--accent-contrast);display:flex;align-items:center;justify-content:center;
+    box-shadow:var(--shadow);
+  }
+  .add-fab svg{width:20px;height:20px;}
+  .global-row{display:flex;justify-content:space-between;align-items:center;padding:10px 2px;font-size:0.78rem;}
+  .global-row .val{color:var(--text-muted);}
+
+  /* bottom nav */
+  .bottom-nav{
+    flex:none;display:flex;justify-content:space-around;align-items:center;
+    padding:8px 6px 4px;background:var(--nav-bg);border-top:1px solid var(--border);
+  }
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--text-faint);}
+  .nav-item svg{width:20px;height:20px;}
+  .nav-item span{font-size:0.6rem;font-weight:600;}
+  .nav-item.active{color:var(--accent);}
+  .home-indicator{width:110px;height:4px;border-radius:3px;background:var(--text-faint);opacity:0.4;margin:6px auto 8px;}
+
+  @media (max-width:720px){
+    .wrap{padding:24px 16px 40px;}
+  }
+
+  .section-divider{
+    margin:38px 0 6px;padding-top:24px;border-top:1px solid var(--border);
+  }
+  .section-divider h2{margin:0 0 4px;font-size:1.1rem;letter-spacing:-0.01em;}
+  .section-divider p{margin:0;color:var(--text-muted);font-size:0.85rem;max-width:640px;line-height:1.5;}
+
+  /* ---- calendar option B: grid ---- */
+  .grid-cal{display:grid;grid-template-columns:38px repeat(7,1fr);gap:3px;}
+  .gc-head, .gc-cell, .gc-label{display:flex;align-items:center;justify-content:center;}
+  .gc-head{flex-direction:column;padding:5px 0;border-radius:8px;font-size:0.6rem;color:var(--text-faint);}
+  .gc-head .n{font-size:0.74rem;font-weight:700;color:var(--text);margin-top:1px;}
+  .gc-head.today{background:var(--accent);}
+  .gc-head.today .n, .gc-head.today{color:var(--accent-contrast);}
+  .gc-label{justify-content:flex-start;font-size:0.62rem;color:var(--text-muted);font-weight:600;padding-right:2px;}
+  .gc-cell{height:30px;border-radius:8px;background:var(--surface-alt);border:1px solid var(--border);}
+  .gc-cell.today-col{border-color:var(--accent);}
+  .gc-row{display:contents;}
+
+  /* ---- calendar option C: agenda / day focus ---- */
+  .week-strip{display:flex;align-items:center;gap:4px;margin-bottom:16px;}
+  .week-strip .arrow{flex:none;color:var(--text-faint);padding:4px;}
+  .week-strip .arrow svg{width:16px;height:16px;}
+  .week-strip-days{display:flex;gap:5px;flex:1;justify-content:space-between;}
+  .ws-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;border-radius:10px;}
+  .ws-day .d{font-size:0.58rem;color:var(--text-faint);}
+  .ws-day .n{font-size:0.76rem;font-weight:700;}
+  .ws-day .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:1px;}
+  .ws-day.active{background:var(--accent);}
+  .ws-day.active .d, .ws-day.active .n{color:var(--accent-contrast);}
+  .ws-day.active .dot{background:var(--accent-contrast);}
+  .agenda-heading{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
+  .agenda-heading h3{margin:0;font-size:1rem;}
+  .agenda-heading span{font-size:0.72rem;color:var(--text-faint);}
+
+  /* =========================================================
+     v2 additions — 5 more options
+     ========================================================= */
+  :root{--warn:#b45309;--warn-soft:rgba(180,83,9,0.12);}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){--warn:#f0a43a;--warn-soft:rgba(240,164,58,0.14);}
+  }
+  :root[data-theme="dark"]{--warn:#f0a43a;--warn-soft:rgba(240,164,58,0.14);}
+
+  .opt-num{
+    display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;
+    background:var(--accent);color:var(--accent-contrast);font-size:0.7rem;font-weight:700;margin-right:7px;vertical-align:1px;
+  }
+  .phone-note{margin:14px 2px 0;font-size:0.76rem;color:var(--text-muted);line-height:1.5;}
+  .phone-note code{font-size:0.7rem;background:var(--surface);border:1px solid var(--border);padding:0 4px;border-radius:4px;}
+  .chip.warn{background:var(--warn-soft);color:var(--warn);}
+  .chip.danger{background:rgba(224,52,90,0.12);color:var(--danger);}
+
+  /* ---------- Option 1: Today, warm & playful ---------- */
+  .theme-warm{
+    --surface:#fff8f0;--surface-alt:#ffffff;--border:#f0e2d0;--text:#2b1d12;--text-muted:#7a6553;--text-faint:#a8927e;
+    --accent:#e8603c;--accent-soft:#ffe6dc;--accent-contrast:#ffffff;--nav-bg:#fff8f0;
+    font-family:"Nunito",-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) .theme-warm{
+      --surface:#1f1915;--surface-alt:#2a221c;--border:#3a2f27;--text:#f7ede4;--text-muted:#c4ae9b;--text-faint:#8f7b6a;
+      --accent:#ff8a65;--accent-soft:rgba(255,138,101,0.16);--accent-contrast:#2b1208;--nav-bg:#1f1915;
+    }
+  }
+  :root[data-theme="dark"] .theme-warm{
+    --surface:#1f1915;--surface-alt:#2a221c;--border:#3a2f27;--text:#f7ede4;--text-muted:#c4ae9b;--text-faint:#8f7b6a;
+    --accent:#ff8a65;--accent-soft:rgba(255,138,101,0.16);--accent-contrast:#2b1208;--nav-bg:#1f1915;
+  }
+  .theme-warm .app-header h2{font-size:1.4rem;font-weight:800;}
+  .warm-hero{border-radius:22px;padding:16px;background:#0a8f66;color:#fff;margin-bottom:16px;position:relative;overflow:hidden;}
+  .warm-hero::after{content:"";position:absolute;right:-30px;bottom:-40px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.12);}
+  .warm-hero .k{font-size:0.64rem;font-weight:800;opacity:0.85;text-transform:uppercase;letter-spacing:0.07em;}
+  .warm-hero h3{margin:4px 0 2px;font-size:1.25rem;font-weight:800;}
+  .warm-hero p{margin:0;font-size:0.76rem;opacity:0.92;}
+  .warm-hero .badge{position:absolute;right:14px;top:14px;background:rgba(255,255,255,0.22);border-radius:20px;padding:3px 9px;font-size:0.66rem;font-weight:800;}
+  .warm-progress{display:flex;gap:4px;margin-top:14px;position:relative;z-index:1;}
+  .warm-progress span{flex:1;height:6px;border-radius:4px;background:rgba(255,255,255,0.3);}
+  .warm-progress span.on{background:#fff;}
+  .warm-title{font-size:0.92rem;font-weight:800;margin:0 0 10px;display:flex;justify-content:space-between;align-items:baseline;}
+  .warm-title small{font-size:0.68rem;font-weight:700;color:var(--text-faint);}
+  .tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .tile{border-radius:18px;padding:14px 12px 12px;background:var(--surface-alt);border:1.5px solid var(--border);position:relative;min-height:112px;display:flex;flex-direction:column;overflow:hidden;}
+  .tile-stripe{position:absolute;left:0;right:0;top:0;height:5px;}
+  .tile .avatar{width:28px;height:28px;}
+  .tile .who{font-weight:800;font-size:0.86rem;margin-top:8px;}
+  .tile .what{font-size:0.72rem;color:var(--text-muted);margin-top:1px;line-height:1.35;}
+  .tile .state{margin-top:auto;padding-top:8px;font-size:0.64rem;font-weight:800;display:flex;align-items:center;gap:5px;}
+  .tile .state i{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .tile.free{background:transparent;border-style:dashed;}
+  .warm-next{display:flex;align-items:center;gap:10px;background:var(--accent-soft);border-radius:16px;padding:11px 13px;font-size:0.76rem;font-weight:700;color:var(--accent);}
+  .warm-next svg{width:18px;height:18px;flex:none;}
+  .pill-nav{margin:0 14px 12px;border-radius:22px;background:var(--text);display:flex;justify-content:space-around;padding:9px 6px;flex:none;}
+  .pill-nav .nav-item{color:var(--surface);opacity:0.6;}
+  .pill-nav .nav-item.active{color:var(--accent);opacity:1;}
+
+  /* ---------- Option 2: Today, minimal mono timeline ---------- */
+  .theme-mono{
+    --surface:#fafafa;--surface-alt:#ffffff;--border:#e4e4e4;--text:#111111;--text-muted:#666666;--text-faint:#999999;
+    --accent:#111111;--accent-soft:#efefef;--accent-contrast:#ffffff;--nav-bg:#fafafa;color:var(--text);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) .theme-mono{
+      --surface:#0e0e0e;--surface-alt:#161616;--border:#2a2a2a;--text:#f2f2f2;--text-muted:#9a9a9a;--text-faint:#6a6a6a;
+      --accent:#f2f2f2;--accent-soft:#222222;--accent-contrast:#111111;--nav-bg:#0e0e0e;
+    }
+  }
+  :root[data-theme="dark"] .theme-mono{
+    --surface:#0e0e0e;--surface-alt:#161616;--border:#2a2a2a;--text:#f2f2f2;--text-muted:#9a9a9a;--text-faint:#6a6a6a;
+    --accent:#f2f2f2;--accent-soft:#222222;--accent-contrast:#111111;--nav-bg:#0e0e0e;
+  }
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+  .mono-date{display:flex;align-items:flex-end;gap:10px;padding:10px 20px 14px;}
+  .mono-date .big{font-size:3.4rem;font-weight:200;line-height:0.82;letter-spacing:-0.05em;}
+  .mono-date .side{font-size:0.72rem;color:var(--text-muted);line-height:1.35;padding-bottom:2px;}
+  .mono-date .side b{color:var(--text);font-weight:600;display:block;font-size:0.82rem;}
+  .mono-date .count{margin-left:auto;text-align:right;font-size:0.74rem;padding-bottom:2px;}
+  .mono-date .count span{display:block;font-size:0.6rem;color:var(--text-faint);}
+  .mono-progress{height:2px;background:var(--border);margin:0 20px 4px;flex:none;}
+  .mono-progress div{height:100%;width:75%;background:var(--text);}
+  .theme-mono .content{padding:2px 20px 10px;}
+  .mono-h{font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);margin:16px 0 2px;}
+  .tl{position:relative;padding-left:20px;}
+  .tl::before{content:"";position:absolute;left:4px;top:18px;bottom:18px;width:1px;background:var(--border);}
+  .tl-item{position:relative;display:flex;align-items:baseline;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);}
+  .tl-item:last-child{border-bottom:none;}
+  .tl-dot{position:absolute;left:-20px;top:16px;width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 3px var(--surface);}
+  .tl-item .t{font-size:0.94rem;font-weight:500;}
+  .tl-item .tag{font-size:0.58rem;color:var(--text-faint);}
+  .tl-item .p{margin-left:auto;font-size:0.72rem;color:var(--text-muted);}
+  .tl-item.done .t{text-decoration:line-through;color:var(--text-faint);}
+  .tl-item.done .tl-dot{opacity:0.35;}
+  .tl-item.yours .t{font-weight:700;}
+  .mono-row{display:flex;font-size:0.76rem;padding:8px 0;border-bottom:1px dashed var(--border);gap:12px;align-items:center;}
+  .mono-row .d{width:50px;color:var(--text-faint);font-size:0.68rem;}
+  .mono-row .who{margin-left:auto;display:flex;gap:4px;}
+  .mono-row .who i{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .text-nav{flex:none;display:flex;justify-content:space-around;padding:12px 10px 14px;border-top:1px solid var(--border);font-size:0.7rem;color:var(--text-faint);font-weight:500;}
+  .text-nav .active{color:var(--text);font-weight:700;text-decoration:underline;text-underline-offset:5px;}
+
+  /* ---------- Option 3: Person detail ---------- */
+  .back-row{display:flex;align-items:center;gap:4px;font-size:0.76rem;color:var(--accent);font-weight:600;padding:6px 14px 0;flex:none;}
+  .back-row svg{width:16px;height:16px;}
+  .profile{display:flex;align-items:center;gap:12px;padding:8px 18px 12px;flex:none;}
+  .avatar.lg{width:50px;height:50px;font-size:1.05rem;}
+  .profile h2{margin:0;font-size:1.2rem;letter-spacing:-0.01em;}
+  .profile .chips{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap;}
+  .stat-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;}
+  .stat-box{background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:9px 10px;}
+  .stat-box .num{font-size:1.05rem;font-weight:700;}
+  .stat-box .num small{font-size:0.64rem;font-weight:600;color:var(--text-faint);}
+  .stat-box .lbl{font-size:0.6rem;color:var(--text-faint);margin-top:1px;}
+  .share-row{display:grid;grid-template-columns:58px 1fr 26px;align-items:center;gap:9px;font-size:0.74rem;}
+  .share-row + .share-row{margin-top:11px;}
+  .share-track{height:8px;border-radius:5px;background:var(--surface);border:1px solid var(--border);position:relative;}
+  .share-fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px;}
+  .share-avg{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--text);border-radius:1px;}
+  .share-row .v{text-align:right;font-weight:700;}
+  .share-row.excluded{color:var(--text-faint);}
+  .share-row.excluded .share-track{background:repeating-linear-gradient(45deg,var(--surface) 0 4px,var(--border) 4px 6px);}
+  .share-legend{display:flex;gap:12px;font-size:0.6rem;color:var(--text-faint);margin-top:12px;align-items:center;}
+  .share-legend i{display:inline-block;width:2px;height:10px;background:var(--text);margin-right:4px;vertical-align:-1px;}
+  .kv{display:flex;justify-content:space-between;align-items:center;font-size:0.76rem;}
+  .kv + .kv{margin-top:9px;}
+  .kv .k{color:var(--text-muted);}
+  .kv .val{font-weight:600;display:flex;align-items:center;gap:6px;}
+  .up-row{display:flex;align-items:center;gap:10px;font-size:0.78rem;}
+  .up-row + .up-row{margin-top:9px;}
+  .up-date{width:38px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:3px 0;flex:none;}
+  .up-date .d{display:block;font-size:0.54rem;color:var(--text-faint);}
+  .up-date .n{display:block;font-size:0.78rem;font-weight:700;}
+
+  /* ---------- Option 4: Exceptions explainer ---------- */
+  .health-card{border-radius:16px;padding:14px;background:var(--surface-alt);border:1px solid var(--border);margin-bottom:6px;}
+  .health-top{display:flex;gap:12px;align-items:center;}
+  .shield{width:40px;height:40px;border-radius:12px;background:rgba(15,157,106,0.14);color:var(--success);display:flex;align-items:center;justify-content:center;flex:none;}
+  .shield svg{width:22px;height:22px;}
+  .health-card h3{margin:0;font-size:0.92rem;}
+  .health-card p{margin:3px 0 0;font-size:0.7rem;color:var(--text-muted);line-height:1.4;}
+  .exc-card{background:var(--surface-alt);border:1px solid var(--border);border-left:3px solid var(--warn);border-radius:12px;padding:12px;margin-bottom:10px;}
+  .exc-head{display:flex;align-items:center;gap:9px;}
+  .exc-head .name{font-size:0.82rem;}
+  .gap-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:11px 0 6px;}
+  .gap-day{border-radius:8px;padding:5px 0;text-align:center;font-size:0.56rem;color:var(--text-faint);background:var(--surface);border:1px solid var(--border);}
+  .gap-day b{display:block;font-size:0.68rem;color:var(--text);margin-bottom:1px;}
+  .gap-day.work{background:var(--alice);color:#fff;border-color:transparent;}
+  .gap-day.work b{color:#fff;}
+  .gap-day.short{outline:2px dashed var(--warn);outline-offset:2px;}
+  .gap-caption{font-size:0.66rem;color:var(--warn);font-weight:600;margin-bottom:9px;}
+  .why{font-size:0.68rem;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;}
+  .why .lead{font-weight:700;color:var(--text);margin-bottom:6px;font-size:0.66rem;text-transform:uppercase;letter-spacing:0.04em;}
+  .cand{display:flex;align-items:center;gap:7px;}
+  .cand + .cand{margin-top:5px;}
+  .cand .avatar{width:16px;height:16px;font-size:0.5rem;}
+  .cand .pick{margin-left:auto;font-size:0.58rem;font-weight:700;color:var(--accent);}
+  .vcheck{display:flex;align-items:center;gap:9px;font-size:0.74rem;padding:5px 0;}
+  .vcheck .ok{width:18px;height:18px;border-radius:50%;background:var(--success);display:flex;align-items:center;justify-content:center;flex:none;}
+  .vcheck .ok svg{width:10px;height:10px;color:#fff;}
+  .vcheck .meta{margin:0 0 0 auto;}
+
+  /* ---------- Option 5: Month rollover & export ---------- */
+  .carry-row{display:flex;gap:11px;align-items:flex-start;}
+  .carry-row + .carry-row{margin-top:11px;padding-top:11px;border-top:1px solid var(--border);}
+  .carry-row .icon-badge{width:30px;height:30px;border-radius:9px;}
+  .carry-row .icon-badge svg{width:16px;height:16px;}
+  .carry-row .name{font-size:0.8rem;}
+  .carry-row .meta{line-height:1.4;}
+  .seg{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:2px;margin-top:8px;}
+  .seg span{flex:1;text-align:center;font-size:0.66rem;padding:5px 0;border-radius:8px;color:var(--text-muted);font-weight:600;}
+  .seg span.on{background:var(--accent);color:var(--accent-contrast);}
+  .export-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .export-tile{background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:10px 6px 9px;text-align:center;font-size:0.72rem;font-weight:700;}
+  .export-tile svg{width:20px;height:20px;color:var(--accent);display:block;margin:0 auto 5px;}
+  .export-tile .meta{font-weight:400;font-size:0.58rem;}
+  .cta{background:var(--accent);color:var(--accent-contrast);border-radius:14px;padding:12px;text-align:center;font-weight:700;font-size:0.84rem;margin-top:14px;}
+  .cta-sub{text-align:center;font-size:0.62rem;color:var(--text-faint);margin-top:6px;}
+</style>
+
+<div class="wrap">
+  <div class="page-head">
+    <h1>Chore Scheduler — 5 more options</h1>
+    <p>Companion to <code>chore-scheduler-mockups.html</code>. Options 1–2 restyle the Today screen in two new directions. Options 3–5 are new screens for things the Python backend already computes but the app doesn't show yet: per-person fairness, unavoidable exceptions, and month-to-month carry-over.</p>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="dot" style="background:var(--alice)"></span>Alice</div>
+    <div class="legend-item"><span class="dot" style="background:var(--bob)"></span>Bob · off Sat &amp; Sun · excluded from Mop</div>
+    <div class="legend-item"><span class="dot" style="background:var(--carol)"></span>Carol · off Friday</div>
+    <div class="legend-item"><span class="dot" style="background:var(--dave)"></span>Dave (you)</div>
+  </div>
+
+  <div class="phones-row">
+
+    <!-- ============ OPTION 1: TODAY — WARM & PLAYFUL ============ -->
+    <div class="phone-col">
+      <p class="phone-label"><b class="opt-num">1</b>Today — warm &amp; playful<span>Style direction: friendly, person-first tiles</span></p>
+      <div class="phone"><div class="screen theme-warm">
+        <div class="statusbar"><span>9:41</span><div class="icons"><span>••••</span><span>&#9724;</span></div></div>
+
+        <div class="app-header">
+          <div class="title-row">
+            <div><h2>Hey Dave!</h2><p class="sub">Wednesday, August 12</p></div>
+            <div class="avatar" style="background:var(--dave)">D</div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="warm-hero">
+            <div class="badge">Done</div>
+            <div class="k">Your turn today</div>
+            <h3>Dishes</h3>
+            <p>Done at 8:12am · next up Sat, Vacuum</p>
+            <div class="warm-progress"><span class="on"></span><span class="on"></span><span class="on"></span><span></span></div>
+          </div>
+
+          <div class="warm-title">Who's on what<small>3 of 4 done</small></div>
+          <div class="tile-grid">
+            <div class="tile">
+              <div class="tile-stripe" style="background:var(--alice)"></div>
+              <div class="avatar" style="background:var(--alice)">A</div>
+              <div class="who">Alice</div>
+              <div class="what">Vacuum + Mop</div>
+              <div class="state" style="color:var(--warn)"><i style="background:var(--warn)"></i>Mop pending</div>
+            </div>
+            <div class="tile">
+              <div class="tile-stripe" style="background:var(--carol)"></div>
+              <div class="avatar" style="background:var(--carol)">C</div>
+              <div class="who">Carol</div>
+              <div class="what">Trash</div>
+              <div class="state" style="color:var(--success)"><i style="background:var(--success)"></i>Done</div>
+            </div>
+            <div class="tile">
+              <div class="tile-stripe" style="background:var(--dave)"></div>
+              <div class="avatar" style="background:var(--dave)">D</div>
+              <div class="who">Dave</div>
+              <div class="what">Dishes</div>
+              <div class="state" style="color:var(--success)"><i style="background:var(--success)"></i>Done</div>
+            </div>
+            <div class="tile free">
+              <div class="avatar" style="background:var(--bob)">B</div>
+              <div class="who">Bob</div>
+              <div class="what">Resting today</div>
+              <div class="state" style="color:var(--text-faint)">Dishes tomorrow</div>
+            </div>
+          </div>
+
+          <div class="warm-next">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.5 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg>
+            Workload is even this month: everyone's within 1 task
+          </div>
+        </div>
+
+        <div class="pill-nav">
+          <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Today</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg><span>Calendar</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 19c0-2 1.5-4 4-4s3.5 1.6 3.5 4"/></svg><span>Team</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7l1.7 1M18.1 16l1.7 1M4.2 17l1.7-1M18.1 8l1.7-1M3 12h2M19 12h2"/></svg><span>Setup</span></div>
+        </div>
+      </div></div>
+      <p class="phone-note">Rounded type, warm paper background, a floating pill nav. It's built around <em>people</em> rather than tasks: one tile per roommate, including whoever is resting today.</p>
+    </div>
+
+    <!-- ============ OPTION 2: TODAY — MINIMAL MONO ============ -->
+    <div class="phone-col">
+      <p class="phone-label"><b class="opt-num">2</b>Today — minimal mono<span>Style direction: editorial timeline</span></p>
+      <div class="phone"><div class="screen theme-mono">
+        <div class="statusbar"><span>9:41</span><div class="icons"><span>••••</span><span>&#9724;</span></div></div>
+
+        <div class="mono-date">
+          <div class="big">12</div>
+          <div class="side"><b>Wednesday</b>August 2026</div>
+          <div class="count mono">3/4<span>done</span></div>
+        </div>
+        <div class="mono-progress"><div></div></div>
+
+        <div class="content">
+          <div class="mono-h mono">Today</div>
+          <div class="tl">
+            <div class="tl-item done yours"><span class="tl-dot" style="background:var(--dave)"></span><div><div class="t">Dishes</div><div class="tag mono">DAILY</div></div><div class="p">You · 8:12</div></div>
+            <div class="tl-item done"><span class="tl-dot" style="background:var(--carol)"></span><div><div class="t">Trash</div><div class="tag mono">EVERY 7D ±1</div></div><div class="p">Carol</div></div>
+            <div class="tl-item done"><span class="tl-dot" style="background:var(--alice)"></span><div><div class="t">Vacuum</div><div class="tag mono">EVERY 3D ±1</div></div><div class="p">Alice</div></div>
+            <div class="tl-item"><span class="tl-dot" style="background:var(--alice)"></span><div><div class="t">Mop</div><div class="tag mono">2ND VACUUM</div></div><div class="p">Alice</div></div>
+          </div>
+
+          <div class="mono-h mono">Next 4 days</div>
+          <div class="mono-row"><span class="d mono">THU 13</span>Dishes<span class="who"><i style="background:var(--bob)"></i></span></div>
+          <div class="mono-row"><span class="d mono">FRI 14</span>Dishes<span class="who"><i style="background:var(--alice)"></i></span></div>
+          <div class="mono-row"><span class="d mono">SAT 15</span>Dishes, Vacuum<span class="who"><i style="background:var(--carol)"></i><i style="background:var(--dave)"></i></span></div>
+          <div class="mono-row" style="border-bottom:none;"><span class="d mono">SUN 16</span>Dishes<span class="who"><i style="background:var(--dave)"></i></span></div>
+        </div>
+
+        <div class="text-nav">
+          <span class="active">Today</span><span>Calendar</span><span>Team</span><span>Setup</span>
+        </div>
+      </div></div>
+      <p class="phone-note">Greyscale with hairline rules and a big date numeral. The only colour is each roommate's dot, so "who" stands out and "what" stays quiet. Text-only tabs.</p>
+    </div>
+
+    <!-- ============ OPTION 3: PERSON DETAIL ============ -->
+    <div class="phone-col">
+      <p class="phone-label"><b class="opt-num">3</b>Person detail<span>Tap a card on Team → one roommate's fairness</span></p>
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><div class="icons"><span>••••</span><span>&#9724;</span></div></div>
+        <div class="back-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Household</div>
+
+        <div class="profile">
+          <div class="avatar lg" style="background:var(--bob)">B</div>
+          <div>
+            <h2>Bob</h2>
+            <div class="chips"><span class="off-chip">Off Sat &amp; Sun</span><span class="chip danger">Never: Mop</span></div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="stat-trio">
+            <div class="stat-box"><div class="num">10</div><div class="lbl">tasks · August</div></div>
+            <div class="stat-box"><div class="num">3.4<small> d</small></div><div class="lbl">avg rest gap</div></div>
+            <div class="stat-box"><div class="num">0</div><div class="lbl">buffer breaks</div></div>
+          </div>
+
+          <div class="section-title">Share of each chore</div>
+          <div class="card">
+            <div class="share-row"><span>Dishes</span><div class="share-track"><div class="share-fill" style="width:87.5%;background:var(--bob)"></div><div class="share-avg" style="left:87.5%"></div></div><span class="v">7</span></div>
+            <div class="share-row"><span>Vacuum</span><div class="share-track"><div class="share-fill" style="width:25%;background:var(--bob)"></div><div class="share-avg" style="left:31%"></div></div><span class="v">2</span></div>
+            <div class="share-row"><span>Trash</span><div class="share-track"><div class="share-fill" style="width:12.5%;background:var(--bob)"></div><div class="share-avg" style="left:12.5%"></div></div><span class="v">1</span></div>
+            <div class="share-row excluded"><span>Mop</span><div class="share-track"></div><span class="v">—</span></div>
+            <div class="share-legend"><span><i></i>house average among eligible</span></div>
+            <div class="meta" style="margin-top:6px;">Mop is shared by the 3 eligible people. Bob's zero doesn't count as unfair.</div>
+          </div>
+
+          <div class="section-title">Carried over from July</div>
+          <div class="card">
+            <div class="kv"><span class="k">Rest owed</span><span class="val">through Aug 1</span></div>
+            <div class="kv"><span class="k">Last task</span><span class="val">Dishes · Jul 30</span></div>
+            <div class="kv"><span class="k">Since June 1</span><span class="val">31 tasks <span class="chip done">on par</span></span></div>
+          </div>
+
+          <div class="section-title">Up next</div>
+          <div class="card" style="margin-bottom:2px;">
+            <div class="up-row"><div class="up-date"><span class="d">Thu</span><span class="n">13</span></div><div class="grow"><div class="name">Dishes</div></div><span class="chip muted">tomorrow</span></div>
+            <div class="up-row"><div class="up-date"><span class="d">Mon</span><span class="n">17</span></div><div class="grow"><div class="name">Dishes</div></div><span class="chip muted">in 5 days</span></div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Today</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg><span>Calendar</span></div>
+          <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 19c0-2 1.5-4 4-4s3.5 1.6 3.5 4"/></svg><span>Team</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7l1.7 1M18.1 16l1.7 1M4.2 17l1.7-1M18.1 8l1.7-1M3 12h2M19 12h2"/></svg><span>Setup</span></div>
+        </div>
+      </div></div>
+      <p class="phone-note">Shows <code>days_off</code>, <code>exclusions</code>, per-chore counts against the eligible-only average (README §12), and the rest/fairness carried over in <code>schedule_state.json</code>.</p>
+    </div>
+
+    <!-- ============ OPTION 4: EXCEPTIONS EXPLAINER ============ -->
+    <div class="phone-col">
+      <p class="phone-label"><b class="opt-num">4</b>Schedule health<span>Unavoidable exceptions, explained</span></p>
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><div class="icons"><span>••••</span><span>&#9724;</span></div></div>
+        <div class="back-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Setup</div>
+
+        <div class="app-header" style="padding-top:4px;">
+          <div class="title-row">
+            <div><h2>Schedule health</h2><p class="sub">August · MILP schedule</p></div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="health-card">
+            <div class="health-top">
+              <div class="shield"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4.4-3 7.8-7 9-4-1.2-7-4.6-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+              <div><h3>2 exceptions, proven minimum</h3><p>The solver proved no schedule for these rules can do better. Nothing here is a bug.</p></div>
+            </div>
+          </div>
+
+          <div class="section-title">Rest buffer · 1</div>
+          <div class="exc-card">
+            <div class="exc-head">
+              <div class="avatar sm" style="background:var(--alice)">A</div>
+              <div class="grow"><div class="name">Alice: short rest</div><div class="meta">Vacuum + Mop → Dishes</div></div>
+              <span class="chip warn">1 of 2 days</span>
+            </div>
+            <div class="gap-strip">
+              <div class="gap-day work"><b>Wed 12</b>Vac + Mop</div>
+              <div class="gap-day"><b>Thu 13</b>rest</div>
+              <div class="gap-day work short"><b>Fri 14</b>Dishes</div>
+            </div>
+            <div class="gap-caption">Buffer needs 2 rest days, got 1</div>
+            <div class="why">
+              <div class="lead">Why Friday had no clean option</div>
+              <div class="cand"><div class="avatar" style="background:var(--carol)">C</div>Carol is off Fridays</div>
+              <div class="cand"><div class="avatar" style="background:var(--bob)">B</div>Bob did Dishes Thursday</div>
+              <div class="cand"><div class="avatar" style="background:var(--dave)">D</div>Dave also worked Wednesday</div>
+              <div class="cand"><div class="avatar" style="background:var(--alice)">A</div>Alice ties with Dave<span class="pick">PICKED · per-chore balance</span></div>
+            </div>
+          </div>
+
+          <div class="section-title">Cadence · 1</div>
+          <div class="exc-card">
+            <div class="exc-head">
+              <div class="icon-badge" style="background:var(--accent-soft);width:28px;height:28px;border-radius:8px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" style="width:15px;height:15px;"><path d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M7 7l1 12a2 2 0 002 2h4a2 2 0 002-2l1-12"/></svg>
+              </div>
+              <div class="grow"><div class="name">Trash came early</div><div class="meta">Jul 29 → Aug 3 · 5 days apart</div></div>
+              <span class="chip warn">min 6</span>
+            </div>
+            <div class="why" style="margin-top:10px;">July's run left Trash mid-cycle. Holding the carried-over phase meant one short gap at the month boundary.</div>
+          </div>
+
+          <div class="section-title">Validation</div>
+          <div class="card" style="margin-bottom:2px;">
+            <div class="vcheck"><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Every chore fires on schedule<span class="meta">47/47</span></div>
+            <div class="vcheck"><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Mop on every 2nd Vacuum<span class="meta">5/5</span></div>
+            <div class="vcheck"><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>No one works a day off<span class="meta">0 hits</span></div>
+            <div class="vcheck"><span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Exclusions respected<span class="meta">0 hits</span></div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Today</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg><span>Calendar</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 19c0-2 1.5-4 4-4s3.5 1.6 3.5 4"/></svg><span>Team</span></div>
+          <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7l1.7 1M18.1 16l1.7 1M4.2 17l1.7-1M18.1 8l1.7-1M3 12h2M19 12h2"/></svg><span>Setup</span></div>
+        </div>
+      </div></div>
+      <p class="phone-note">The mobile version of main.py's "⚠️ UNAVOIDABLE" printout plus the validator (README §14). The Friday example is real for this sample data: every candidate breaks the buffer, so the app shows <em>why</em>.</p>
+    </div>
+
+    <!-- ============ OPTION 5: MONTH ROLLOVER & EXPORT ============ -->
+    <div class="phone-col">
+      <p class="phone-label"><b class="opt-num">5</b>Wrap up &amp; next month<span>Carry-over, re-plan, export</span></p>
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><div class="icons"><span>••••</span><span>&#9724;</span></div></div>
+
+        <div class="app-header">
+          <div class="title-row">
+            <div><h2>Wrap up August</h2><p class="sub">Aug 1 – Aug 28 · 4 weeks · MILP</p></div>
+            <div class="avatar" style="background:var(--dave)">D</div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="section-title">Carries into the next plan</div>
+          <div class="card">
+            <div class="carry-row">
+              <div class="icon-badge" style="background:var(--accent-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg></div>
+              <div class="grow"><div class="name">Rest owed</div><div class="meta">Alice &amp; Carol worked Aug 28, so they're lightly held back Aug 29–30</div></div>
+            </div>
+            <div class="carry-row">
+              <div class="icon-badge" style="background:var(--accent-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div>
+              <div class="grow"><div class="name">Chore phase</div><div class="meta">Vacuum due by Aug 30 · Trash by Sep 2 · Mop on next 2nd Vacuum</div></div>
+            </div>
+            <div class="carry-row">
+              <div class="icon-badge" style="background:var(--accent-soft)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg></div>
+              <div class="grow"><div class="name">Fairness history</div>
+                <div class="balance-bar-track"><div class="balance-bar-seg" style="width:25.3%;background:var(--alice)"></div><div class="balance-bar-seg" style="width:24.7%;background:var(--bob)"></div><div class="balance-bar-seg" style="width:24.7%;background:var(--carol)"></div><div class="balance-bar-seg" style="width:25.3%;background:var(--dave)"></div></div>
+                <div class="meta" style="margin-top:5px;">42 · 41 · 41 · 42 tasks since June</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title">Next plan</div>
+          <div class="card">
+            <div class="kv"><span class="k">Starts</span><span class="val">Sat, Aug 29</span></div>
+            <div class="kv"><span class="k">Length</span><span class="val">4 weeks</span></div>
+            <div class="kv" style="margin-top:12px;"><span class="k">Roommate order</span></div>
+            <div class="seg"><span class="on">Keep seed 42</span><span>Fresh shuffle</span></div>
+          </div>
+
+          <div class="section-title">Export August</div>
+          <div class="export-grid">
+            <div class="export-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16"/></svg>CSV<div class="meta">spreadsheet</div></div>
+            <div class="export-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>DOCX<div class="meta">editable</div></div>
+            <div class="export-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M12 11v6M9 14l3 3 3-3"/></svg>PDF<div class="meta">fridge copy</div></div>
+          </div>
+
+          <div class="cta">Generate next schedule</div>
+          <div class="cta-sub">Runs all 6 algorithms · you pick before it's saved</div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span>Today</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg><span>Calendar</span></div>
+          <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M14.5 19c0-2 1.5-4 4-4s3.5 1.6 3.5 4"/></svg><span>Team</span></div>
+          <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M4.2 7l1.7 1M18.1 16l1.7 1M4.2 17l1.7-1M18.1 8l1.7-1M3 12h2M19 12h2"/></svg><span>Setup</span></div>
+        </div>
+      </div></div>
+      <p class="phone-note">Puts the three <code>schedule_state.json</code> carry-overs (README §10), the <code>random_seed</code> choice (§13), and CSV/DOCX/PDF export on one screen, ending in a single "plan next month" action.</p>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,2120 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chore Scheduler Mono</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ================= page tokens (follow the system) ================= */
+  :root{
+    --p-bg:#f4f4f5;--p-s:#ffffff;--p-line:#e4e4e7;--p-tx:#111111;--p-tx2:#5f5f66;--p-tx3:#9a9aa2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --p-bg:#0b0b0c;--p-s:#151516;--p-line:#27272a;--p-tx:#f2f2f2;--p-tx2:#a1a1aa;--p-tx3:#6b6b70;
+    }
+  }
+  :root[data-theme="dark"]{
+    --p-bg:#0b0b0c;--p-s:#151516;--p-line:#27272a;--p-tx:#f2f2f2;--p-tx2:#a1a1aa;--p-tx3:#6b6b70;
+  }
+
+  /* ================= app tokens (forced per frame) ================= */
+  .t-light{
+    --bg:#fafafa;--s1:#ffffff;--soft:#f0f0f0;--line:#e8e8e8;--line2:#d2d2d2;
+    --tx:#111111;--tx2:#666666;--tx3:#9a9a9a;
+    --ok:#0f8a5f;--warn:#b45309;--bad:#c62f4b;
+    --alice:#3b5bdb;--bob:#c2570c;--carol:#b0245c;--dave:#0a8f66;
+  }
+  .t-dark{
+    --bg:#0e0e0e;--s1:#171717;--soft:#1f1f1f;--line:#262626;--line2:#383838;
+    --tx:#f2f2f2;--tx2:#a0a0a0;--tx3:#6b6b6b;
+    --ok:#2fbf8a;--warn:#f0a43a;--bad:#ff6b81;
+    --alice:#6b88ff;--bob:#e88a3a;--carol:#e0609a;--dave:#22c08c;
+  }
+
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--p-bg);color:var(--p-tx);font-family:Inter,-apple-system,"Segoe UI",Roboto,sans-serif;}
+  .mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;}
+  .wrap{max-width:1440px;margin:0 auto;padding:40px 28px 80px;}
+  @media (max-width:720px){.wrap{padding:24px 16px 60px;}}
+
+  /* ================= page chrome ================= */
+  .page-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;}
+  h1.page{font-size:1.6rem;font-weight:600;letter-spacing:-0.02em;margin:0 0 8px;}
+  .lede{color:var(--p-tx2);font-size:0.9rem;line-height:1.55;max-width:720px;margin:0 0 22px;}
+  .zoom-ctl{display:flex;border:1px solid var(--p-line);border-radius:10px;padding:3px;background:var(--p-s);font-size:0.74rem;}
+  .zoom-ctl button{all:unset;cursor:pointer;padding:6px 12px;border-radius:7px;color:var(--p-tx2);}
+  .zoom-ctl button[aria-pressed="true"]{background:var(--p-tx);color:var(--p-bg);font-weight:600;}
+  .principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:22px;}
+  .pr{background:var(--p-s);border:1px solid var(--p-line);border-radius:12px;padding:14px 16px;}
+  .pr b{display:block;font-size:0.84rem;margin-bottom:4px;}
+  .pr span{font-size:0.76rem;color:var(--p-tx2);line-height:1.5;}
+  .toc{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:40px;}
+  .toc a{font-size:0.72rem;color:var(--p-tx);text-decoration:none;border:1px solid var(--p-line);background:var(--p-s);border-radius:20px;padding:5px 11px;}
+  .toc a:hover{border-color:var(--p-tx3);}
+
+  .lane{margin-bottom:56px;scroll-margin-top:20px;}
+  .lane-h{display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--p-line);padding-bottom:8px;margin-bottom:16px;}
+  .lane-h .n{font-size:0.66rem;color:var(--p-tx3);}
+  .lane-h h2{font-size:1.05rem;margin:0;font-weight:600;}
+  .lane-h p{margin:0 0 0 auto;font-size:0.76rem;color:var(--p-tx2);}
+  .flow{display:flex;align-items:flex-start;overflow-x:auto;padding:4px 2px 14px;}
+  .flow + .flow{margin-top:22px;}
+  .node{flex:none;}
+  .node-cap{font-size:0.82rem;font-weight:600;margin:0 0 2px;}
+  .node-sub{font-size:0.68rem;color:var(--p-tx3);margin:0 0 10px;max-width:432px;min-height:1em;}
+  .pair{display:flex;gap:12px;}
+  .mini{width:210px;height:448px;flex:none;}
+  .mini .phone{transform:scale(0.7);transform-origin:top left;}
+  body.zoom .mini{width:300px;height:640px;}
+  body.zoom .mini .phone{transform:none;}
+  .mini-lbl{font-size:0.58rem;color:var(--p-tx3);text-align:center;margin-top:8px;letter-spacing:0.1em;text-transform:uppercase;}
+  .conn{flex:none;width:96px;margin-top:250px;display:flex;flex-direction:column;align-items:center;padding:0 8px;}
+  body.zoom .conn{margin-top:340px;}
+  .conn .lbl{font-size:0.6rem;font-weight:500;text-align:center;margin-bottom:6px;line-height:1.35;}
+  .conn .lbl.back{color:var(--p-tx3);margin:6px 0 0;}
+  .arrow{height:1px;width:100%;background:var(--p-tx3);position:relative;}
+  .arrow::after{content:"";position:absolute;right:-1px;top:-4px;border:4.5px solid transparent;border-left-color:var(--p-tx3);}
+  .ref{flex:none;margin-top:226px;border:1px dashed var(--p-tx3);border-radius:12px;padding:12px 14px;font-size:0.7rem;color:var(--p-tx2);width:150px;line-height:1.45;}
+  body.zoom .ref{margin-top:316px;}
+  .ref b{display:block;color:var(--p-tx);font-size:0.78rem;margin-bottom:2px;}
+
+  /* ================= phone ================= */
+  .phone{width:300px;height:640px;border-radius:40px;background:#050505;padding:9px;box-shadow:0 14px 34px rgba(0,0,0,0.16);}
+  .phone.t-dark{box-shadow:0 14px 34px rgba(0,0,0,0.16), inset 0 0 0 1px #2c2c2c;}
+  .scr{position:relative;width:100%;height:100%;border-radius:31px;overflow:hidden;background:var(--bg);color:var(--tx);
+       display:flex;flex-direction:column;font-family:Inter,-apple-system,"Segoe UI",sans-serif;font-size:14px;}
+  .scr .mono, .w .mono{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;}
+
+  .sb{display:flex;justify-content:space-between;padding:12px 24px 4px;font-size:0.68rem;font-weight:600;flex:none;}
+  .sb i{font-style:normal;letter-spacing:1px;}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:8px 20px 4px;min-height:36px;flex:none;font-size:0.76rem;}
+  .bk{color:var(--tx2);}
+  .bk::before{content:"‹";font-size:1.05rem;margin-right:5px;}
+  .act{font-weight:600;text-decoration:underline;text-underline-offset:3px;}
+  .av{width:26px;height:26px;border-radius:50%;border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:0.62rem;font-weight:600;flex:none;}
+  .hd{padding:4px 20px 0;flex:none;}
+  .hd h3{margin:0;font-size:1.45rem;font-weight:600;letter-spacing:-0.025em;line-height:1.15;}
+  .hd p{margin:5px 0 0;font-size:0.72rem;color:var(--tx2);line-height:1.45;}
+  .bd{flex:1;overflow:hidden;padding:4px 20px 10px;}
+  .ft{flex:none;padding:10px 20px 18px;}
+  .cap{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-size:0.56rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--tx3);}
+  .sh{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 0;}
+  .sh a{font-size:0.66rem;color:var(--tx);text-decoration:underline;text-underline-offset:3px;}
+  .li{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line);font-size:0.82rem;min-height:40px;}
+  .li:last-child, .li.end{border-bottom:0;}
+  .li .r{margin-left:auto;font-size:0.7rem;color:var(--tx2);display:flex;align-items:center;gap:6px;text-align:right;flex:none;}
+  .li .s{display:block;font-size:0.64rem;color:var(--tx3);margin-top:2px;}
+  .gt::after{content:"›";margin-left:4px;color:var(--tx3);font-size:0.95rem;}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block;}
+  .ck{width:18px;height:18px;border:1.5px solid var(--line2);border-radius:5px;flex:none;display:flex;align-items:center;justify-content:center;}
+  .ck.on{background:var(--tx);border-color:var(--tx);}
+  .ck.on::after{content:"";width:8px;height:4px;border-left:2px solid var(--bg);border-bottom:2px solid var(--bg);transform:translateY(-1px) rotate(-45deg);}
+  .x{text-decoration:line-through;color:var(--tx3);}
+  .btn{display:block;text-align:center;padding:12px;border-radius:12px;font-size:0.82rem;font-weight:600;background:var(--tx);color:var(--bg);}
+  .btn.gh{background:transparent;color:var(--tx);border:1px solid var(--line2);}
+  .btn.sm{padding:8px 6px;font-size:0.7rem;border-radius:10px;}
+  .btn.txt{background:none;color:var(--tx2);font-weight:500;padding:8px;}
+  .btn.danger{background:none;color:var(--bad);font-weight:500;padding:8px;}
+  .row{display:flex;gap:8px;}
+  .row > *{flex:1;}
+  .tabs{flex:none;display:flex;justify-content:space-around;padding:12px 10px 18px;border-top:1px solid var(--line);font-size:0.66rem;color:var(--tx3);}
+  .tabs .on{color:var(--tx);font-weight:600;text-decoration:underline;text-underline-offset:5px;}
+  .seg{display:flex;border:1px solid var(--line2);border-radius:9px;padding:2px;font-size:0.66rem;}
+  .seg span{flex:1;text-align:center;padding:5px 4px;border-radius:7px;color:var(--tx2);}
+  .seg .on{background:var(--tx);color:var(--bg);font-weight:600;}
+  .tg{width:32px;height:19px;border-radius:12px;background:var(--line2);position:relative;flex:none;}
+  .tg::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:var(--bg);}
+  .tg.on{background:var(--tx);}
+  .tg.on::after{left:15px;}
+  .stp{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:9px;font-size:0.78rem;flex:none;}
+  .stp span{width:26px;text-align:center;padding:4px 0;color:var(--tx2);}
+  .stp b{min-width:32px;text-align:center;font-family:"JetBrains Mono",monospace;font-weight:500;border-left:1px solid var(--line);border-right:1px solid var(--line);padding:4px 0;}
+  .pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:20px;padding:4px 10px;font-size:0.68rem;}
+  .pill.on{background:var(--tx);color:var(--bg);border-color:var(--tx);}
+  .pill.off{color:var(--tx3);text-decoration:line-through;}
+  .pill.dash{border-style:dashed;color:var(--tx2);}
+  .wk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:6px;}
+  .wk span{text-align:center;font-size:0.6rem;font-family:"JetBrains Mono",monospace;padding:5px 0;border:1px solid var(--line2);border-radius:7px;}
+  .wk .off{background:var(--soft);color:var(--tx3);text-decoration:line-through;border-color:transparent;}
+  .fld{padding:10px 0;border-bottom:1px solid var(--line);}
+  .fld .v{font-size:0.88rem;margin-top:4px;}
+  .fld .v.ph{color:var(--tx3);}
+  .fr{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:0.8rem;}
+  .fr .r{font-size:0.72rem;color:var(--tx2);}
+  .note{font-size:0.66rem;color:var(--tx2);line-height:1.5;margin:10px 0 0;}
+  .note.ok{color:var(--ok);}
+  .prog{display:flex;gap:4px;}
+  .prog span{flex:1;height:2px;background:var(--line2);}
+  .prog .on{background:var(--tx);}
+  .line{height:2px;background:var(--line);}
+  .line i{display:block;height:100%;background:var(--tx);}
+  .bar{height:6px;background:var(--soft);border-radius:3px;position:relative;flex:1;}
+  .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;}
+  .bar u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--tx);border-radius:1px;}
+  .kv{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:0.76rem;padding:9px 0;border-bottom:1px solid var(--line);}
+  .kv:last-child{border-bottom:0;}
+  .kv .k{color:var(--tx2);}
+  .tag{font-family:"JetBrains Mono",monospace;font-size:0.54rem;letter-spacing:0.06em;text-transform:uppercase;border:1px solid var(--line2);border-radius:5px;padding:2px 5px;color:var(--tx2);font-weight:500;}
+  .tag.ok{color:var(--ok);border-color:currentColor;}
+  .tag.warn{color:var(--warn);border-color:currentColor;}
+  .tag.inv{background:var(--tx);color:var(--bg);border-color:var(--tx);}
+  .radio{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line2);flex:none;}
+  .radio.on{border:5px solid var(--tx);}
+  .dis{opacity:0.42;}
+  .dim{position:absolute;inset:0;background:rgba(0,0,0,0.42);}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--s1);border-radius:24px 24px 0 0;padding:8px 20px 20px;}
+  .grab{width:36px;height:4px;border-radius:2px;background:var(--line2);margin:0 auto 14px;}
+  .sheet h4{margin:4px 0 6px;font-size:1.05rem;font-weight:600;letter-spacing:-0.01em;}
+
+  /* date block (Today) */
+  .dt{display:flex;align-items:flex-end;gap:10px;padding:6px 20px 14px;flex:none;}
+  .big{font-size:3.3rem;font-weight:200;letter-spacing:-0.05em;line-height:0.82;}
+  .dside{font-size:0.7rem;color:var(--tx2);line-height:1.35;padding-bottom:2px;}
+  .dside b{display:block;color:var(--tx);font-weight:600;font-size:0.82rem;}
+  .dct{margin-left:auto;text-align:right;font-size:0.74rem;padding-bottom:2px;}
+  .dct span{display:block;font-size:0.56rem;color:var(--tx3);}
+  .mr{display:flex;align-items:center;gap:12px;font-size:0.74rem;padding:8px 0;border-bottom:1px dashed var(--line);}
+  .mr:last-child{border-bottom:0;}
+  .mr .d{width:46px;font-size:0.62rem;color:var(--tx3);flex:none;}
+  .mr .w2{margin-left:auto;display:flex;gap:4px;}
+
+  /* launch */
+  .mark{font-size:2.3rem;font-weight:600;letter-spacing:-0.045em;}
+  .dots4{display:flex;gap:6px;justify-content:center;margin-top:10px;}
+  .dots4 i{width:7px;height:7px;border-radius:50%;}
+
+  /* week grid */
+  .gr{display:grid;grid-template-columns:50px repeat(7,1fr);font-size:0.66rem;margin-top:12px;}
+  .gr > div{height:34px;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line);}
+  .gr .lb{justify-content:flex-start;color:var(--tx2);}
+  .gr .h{flex-direction:column;height:42px;font-family:"JetBrains Mono",monospace;font-size:0.52rem;color:var(--tx3);gap:2px;}
+  .gr .h b{font-size:0.72rem;color:var(--tx);font-weight:500;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%;}
+  .gr .tc{background:var(--soft);}
+  .gr .h.tc b{background:var(--tx);color:var(--bg);}
+  .legend-mini{display:flex;gap:10px;flex-wrap:wrap;font-size:0.6rem;color:var(--tx2);margin-top:10px;}
+  .legend-mini span{display:flex;align-items:center;gap:4px;}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:12px;}
+  .stats div{padding:10px 0 9px;}
+  .stats div + div{border-left:1px solid var(--line);padding-left:12px;}
+  .stats b{display:block;font-size:1.2rem;font-weight:300;letter-spacing:-0.03em;}
+  .sr{display:grid;grid-template-columns:52px 1fr 18px;align-items:center;gap:10px;font-size:0.72rem;padding:6px 0;}
+  .sr .v{text-align:right;font-family:"JetBrains Mono",monospace;font-size:0.68rem;}
+  .sr.ex{color:var(--tx3);}
+  .sr.ex .bar{background:repeating-linear-gradient(45deg,var(--soft) 0 4px,var(--line2) 4px 5px);}
+  .mtx{display:grid;grid-template-columns:1fr repeat(4,34px);font-size:0.7rem;margin-top:8px;}
+  .mtx > div{padding:7px 0;border-bottom:1px solid var(--line);text-align:center;font-family:"JetBrains Mono",monospace;}
+  .mtx > div.l{text-align:left;font-family:Inter,sans-serif;color:var(--tx2);}
+  .mtx .h{color:var(--tx3);font-size:0.6rem;display:flex;justify-content:center;align-items:center;gap:3px;}
+  .mtx .z{color:var(--tx3);}
+  .swatches{display:flex;gap:10px;margin-top:8px;}
+  .swatches i{width:20px;height:20px;border-radius:50%;}
+  .swatches i.sel{box-shadow:0 0 0 2px var(--bg), 0 0 0 3.5px var(--tx);}
+  .bigstep{display:flex;align-items:center;justify-content:center;gap:22px;margin:18px 0 6px;}
+  .bigstep span{width:40px;height:40px;border-radius:50%;border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--tx2);}
+  .bigstep b{font-size:3.4rem;font-weight:200;letter-spacing:-0.04em;line-height:1;}
+  .bigstep small{display:block;text-align:center;font-size:0.62rem;color:var(--tx3);font-weight:400;letter-spacing:0;}
+  .imp{display:grid;grid-template-columns:44px 1fr 74px;align-items:center;gap:10px;font-size:0.7rem;padding:7px 0;}
+  .imp .v{text-align:right;color:var(--tx2);font-size:0.64rem;}
+  .imp.cur{font-weight:600;}
+  .imp.cur .v{color:var(--tx);}
+  .why{font-size:0.62rem;color:var(--tx2);background:var(--soft);border-radius:10px;padding:8px 10px;margin:2px 0 6px 19px;line-height:1.7;}
+  .why b{color:var(--tx);font-weight:500;}
+  .st{width:18px;text-align:center;flex:none;font-size:0.8rem;}
+
+  /* ================= widgets ================= */
+  .wsec{margin-top:10px;}
+  .wcard{background:var(--p-s);border:1px solid var(--p-line);border-radius:16px;padding:18px;margin-bottom:16px;display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;}
+  .winfo{width:220px;flex:none;}
+  .winfo h3{margin:0 0 4px;font-size:0.92rem;font-weight:600;}
+  .winfo .sz{font-size:0.62rem;color:var(--p-tx3);margin-bottom:10px;letter-spacing:0.06em;text-transform:uppercase;}
+  .winfo ul{margin:0;padding-left:16px;font-size:0.74rem;color:var(--p-tx2);line-height:1.6;}
+  .wpair{display:flex;gap:14px;flex-wrap:wrap;flex:1;}
+  .wall{border-radius:20px;padding:22px;display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;}
+  .wall.t-light{background:linear-gradient(160deg,#e9e9ed,#d3d5db);}
+  .wall.t-dark{background:linear-gradient(160deg,#1f1f24,#060607);}
+  .wall.col{flex-direction:column;}
+  .w{background:var(--s1);color:var(--tx);border-radius:22px;padding:14px;font-family:Inter,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,0.12);
+     position:relative;overflow:hidden;display:flex;flex-direction:column;flex:none;}
+  .t-dark .w{box-shadow:0 6px 18px rgba(0,0,0,0.4), inset 0 0 0 1px #262626;}
+  .w.s{width:158px;height:158px;}
+  .w.m{width:338px;height:158px;}
+  .w.l{width:338px;height:354px;}
+  .w.strip{width:338px;height:64px;border-radius:18px;flex-direction:row;align-items:center;gap:12px;padding:0 16px;}
+  .w .ttl{font-size:1.2rem;font-weight:600;letter-spacing:-0.02em;}
+  .w .sub{font-size:0.6rem;color:var(--tx3);margin-top:3px;}
+  .w .pin{position:absolute;top:14px;right:14px;}
+  .ring{width:62px;height:62px;border-radius:50%;background:conic-gradient(var(--tx) 0 75%, var(--line2) 0);display:flex;align-items:center;justify-content:center;}
+  .ring i{width:52px;height:52px;border-radius:50%;background:var(--s1);display:flex;align-items:center;justify-content:center;font-style:normal;font-family:"JetBrains Mono",monospace;font-size:0.8rem;}
+  .wbtn{margin-top:auto;background:var(--tx);color:var(--bg);border-radius:20px;padding:8px;text-align:center;font-size:0.72rem;font-weight:600;}
+  .vb{display:flex;align-items:flex-end;gap:8px;height:46px;margin-top:auto;}
+  .vb div{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:"JetBrains Mono",monospace;font-size:0.54rem;color:var(--tx2);}
+  .vb i{width:100%;border-radius:3px;display:block;}
+  .wrow{display:flex;align-items:center;gap:9px;font-size:0.76rem;padding:5px 0;border-bottom:1px solid var(--line);}
+  .wrow:last-child{border-bottom:0;}
+  .wrow .ck{width:15px;height:15px;border-radius:4px;}
+  .wrow .ck.on::after{width:6px;height:3px;}
+  .wrow .r{margin-left:auto;}
+  .wk7{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:auto;}
+  .wk7 div{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;border-radius:10px;}
+  .wk7 .d{font-family:"JetBrains Mono",monospace;font-size:0.52rem;color:var(--tx3);}
+  .wk7 .n{font-size:0.8rem;font-weight:500;}
+  .wk7 .ds{display:flex;flex-direction:column;gap:3px;min-height:26px;}
+  .wk7 .ds i{width:6px;height:6px;border-radius:50%;}
+  .wk7 .tc{background:var(--soft);}
+  .wk7 .tc .n{background:var(--tx);color:var(--bg);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;}
+  .hb{display:grid;grid-template-columns:62px 1fr 18px;align-items:center;gap:8px;font-size:0.7rem;padding:3px 0;}
+  .hb .bar{height:5px;}
+  .hb span:last-child{font-family:"JetBrains Mono",monospace;font-size:0.64rem;text-align:right;}
+  .ag{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:0.74rem;position:relative;}
+  .ag:last-child{border-bottom:0;}
+  .ag .d{width:42px;font-family:"JetBrains Mono",monospace;font-size:0.6rem;color:var(--tx3);flex:none;}
+  .ag .ts{display:flex;flex-wrap:wrap;gap:4px 10px;}
+  .ag .ts span{display:flex;align-items:center;gap:5px;}
+  .ag.tc .d{color:var(--tx);font-weight:500;}
+  .ag.tc::before{content:"";position:absolute;left:-14px;top:6px;bottom:6px;width:2px;background:var(--tx);}
+  .ag.past{color:var(--tx3);}
+
+  /* lock screen */
+  .lockscr{width:320px;border-radius:28px;padding:26px 22px 28px;color:var(--tx);text-align:center;}
+  .t-light .lockscr{background:linear-gradient(170deg,#dfe2e8,#c9ccd4);}
+  .t-dark .lockscr{background:linear-gradient(170deg,#24252b,#09090b);}
+  .lk-date{font-size:0.8rem;font-weight:500;}
+  .lk-date span{color:var(--tx2);}
+  .lk-time{font-size:4.6rem;font-weight:500;letter-spacing:-0.04em;line-height:1;margin:2px 0 16px;}
+  .lk-row{display:flex;gap:10px;justify-content:center;margin-top:10px;}
+  .lk{background:color-mix(in srgb, var(--tx) 9%, transparent);border-radius:16px;text-align:left;}
+  .lk.c{width:66px;height:66px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+  .lk.c b{font-size:1.1rem;font-weight:600;line-height:1;}
+  .lk.c span{font-size:0.5rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--tx2);margin-top:3px;}
+  .lk.c.ringed{background:conic-gradient(var(--tx) 0 75%, color-mix(in srgb, var(--tx) 18%, transparent) 0);}
+  .lk.c.ringed > div{width:56px;height:56px;border-radius:50%;background:color-mix(in srgb, var(--bg) 82%, transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .lk.r{width:150px;height:66px;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;}
+  .lk.r .cap{color:var(--tx2);}
+  .lk.r b{font-size:0.84rem;font-weight:600;margin-top:3px;}
+  .lk.r small{font-size:0.64rem;color:var(--tx2);margin-top:1px;}
+
+  /* edit widget sheet */
+  .ewall{width:360px;border-radius:24px;padding:18px;}
+  .t-light .ewall{background:rgba(0,0,0,0.18);}
+  .t-dark .ewall{background:rgba(255,255,255,0.05);}
+  .esheet{background:var(--s1);color:var(--tx);border-radius:20px;padding:16px;}
+  .esheet .fr{padding:10px 0;border-bottom:1px solid var(--line);}
+  .esheet .fr:last-child{border-bottom:0;}
+  .esheet .seg{width:170px;}
+
+  /* ================= fridge board ================= */
+  .fb{display:grid;grid-template-columns:38px repeat(7,1fr);font-size:0.6rem;border-top:1px solid var(--line2);border-left:1px solid var(--line2);margin-top:12px;}
+  .fb > div{min-height:52px;border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:3px 1px;text-align:center;}
+  .fb .h{min-height:34px;font-family:"JetBrains Mono",monospace;font-size:0.48rem;color:var(--tx3);background:var(--soft);}
+  .fb .h b{font-size:0.68rem;color:var(--tx);font-weight:500;}
+  .fb .h.tc{background:var(--tx);color:var(--bg);}
+  .fb .h.tc b{color:var(--bg);}
+  .fb .p{font-size:0.58rem;font-weight:600;gap:4px;background:var(--soft);}
+  .fb .tc{background:color-mix(in srgb, var(--tx) 5%, transparent);}
+  .fb .off{background:repeating-linear-gradient(45deg,transparent 0 4px,var(--line) 4px 5px);}
+  .fb .ch{font-weight:500;font-size:0.56rem;line-height:1.15;display:flex;align-items:center;gap:2px;}
+  .fb .mk{font-family:"JetBrains Mono",monospace;font-size:0.82rem;line-height:1;font-weight:500;}
+  .fb .mk.no{color:var(--bad);}
+  .fb .pend{display:inline-block;width:11px;height:11px;border:1.5px dashed var(--tx2);border-radius:3px;}
+  .fb .rn{font-family:"JetBrains Mono",monospace;font-size:0.44rem;color:var(--tx3);}
+  .fb .ch .mk{font-size:0.62rem;}
+  .fb .done .ch{color:var(--tx3);}
+  .fb-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:0.56rem;color:var(--tx2);margin-top:8px;font-family:"JetBrains Mono",monospace;}
+  .missed{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border:1px solid var(--line2);border-radius:12px;font-size:0.72rem;}
+  .missed .mk{font-family:"JetBrains Mono",monospace;color:var(--bad);font-size:0.9rem;}
+  .missed .r{margin-left:auto;display:flex;gap:10px;font-size:0.66rem;font-weight:600;text-decoration:underline;text-underline-offset:3px;}
+  .bigopt{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line2);border-radius:14px;font-size:0.84rem;margin-top:8px;}
+  .bigopt .mk{font-family:"JetBrains Mono",monospace;font-size:1.1rem;width:22px;text-align:center;}
+  .bigopt.on{border:1.5px solid var(--tx);}
+  .bigopt .s{display:block;font-size:0.64rem;color:var(--tx3);margin-top:1px;}
+  .cover{display:flex;gap:6px;margin:8px 0 0 34px;}
+
+  /* tablet frame */
+  .tmini{width:470px;height:300px;flex:none;}
+  .tmini .tab{transform:scale(0.5);transform-origin:top left;}
+  body.zoom .tmini{width:940px;height:600px;}
+  body.zoom .tmini .tab{transform:none;}
+  .tab{width:940px;height:600px;border-radius:32px;background:#050505;padding:12px;box-shadow:0 14px 34px rgba(0,0,0,0.16);}
+  .tab.t-dark{box-shadow:0 14px 34px rgba(0,0,0,0.16), inset 0 0 0 1px #2c2c2c;}
+  .tscr{width:100%;height:100%;border-radius:22px;overflow:hidden;background:var(--bg);color:var(--tx);display:flex;font-family:Inter,sans-serif;}
+  .tmain{flex:1;padding:22px 24px;display:flex;flex-direction:column;}
+  .tside{width:250px;border-left:1px solid var(--line);padding:22px 20px;display:flex;flex-direction:column;}
+  .tmain .fb{grid-template-columns:80px repeat(7,1fr);margin-top:16px;}
+  .tmain .fb > div{min-height:84px;}
+  .tmain .fb .h{min-height:46px;font-size:0.6rem;}
+  .tmain .fb .h b{font-size:0.95rem;}
+  .tmain .fb .p{font-size:0.82rem;flex-direction:row;}
+  .tmain .fb .ch{font-size:0.78rem;}
+  .tmain .fb .mk{font-size:1.4rem;}
+  .tmain .fb .ch .mk{font-size:0.9rem;}
+  .tmain .fb .pend{width:18px;height:18px;border-radius:5px;}
+  .tmain .fb .rn{font-size:0.56rem;}
+  .tli{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:0.92rem;}
+  .tli .ck{width:26px;height:26px;border-radius:7px;}
+  .tli .ck.on::after{width:11px;height:5px;}
+  .tli .r{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:0.74rem;color:var(--tx2);}
+
+  /* fridge widget */
+  .w.l .fb{margin-top:10px;grid-template-columns:34px repeat(7,1fr);}
+  .w.l .fb > div{min-height:56px;}
+
+  /* ================= page tables ================= */
+  .tbl-h{font-size:0.9rem;font-weight:600;margin:28px 0 10px;}
+  .tbl-h span{font-weight:400;font-size:0.72rem;color:var(--p-tx3);margin-left:8px;}
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--p-line);border-radius:12px;background:var(--p-s);}
+  .tbl{width:100%;border-collapse:collapse;font-size:0.78rem;min-width:620px;}
+  .tbl th,.tbl td{padding:9px 14px;border-bottom:1px solid var(--p-line);text-align:left;vertical-align:top;}
+  .tbl tr:last-child td{border-bottom:0;}
+  .tbl th{font-family:"JetBrains Mono",monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--p-tx3);font-weight:500;}
+  .tbl td:first-child{font-weight:500;}
+  .cap-tbl td:not(:first-child),.cap-tbl th:not(:first-child){text-align:center;font-family:"JetBrains Mono",monospace;font-size:0.72rem;}
+  .cap-tbl td.na{color:var(--p-tx3);}
+  .lvl{font-family:"JetBrains Mono",monospace;font-size:0.64rem;border:1px solid var(--p-line);border-radius:5px;padding:1px 6px;color:var(--p-tx2);white-space:nowrap;}
+  .lvl.act{border-color:var(--p-tx2);color:var(--p-tx);}
+  .lvl.hi{background:var(--p-tx);color:var(--p-bg);border-color:var(--p-tx);}
+
+  /* ================= notifications ================= */
+  .t-light .lockbg{background:linear-gradient(170deg,#e3e5ea,#cbced6);}
+  .t-dark .lockbg{background:linear-gradient(170deg,#222328,#070708);}
+  .lt{text-align:center;padding:12px 0 18px;flex:none;}
+  .lt .dt2{font-size:0.72rem;font-weight:500;}
+  .lt .tm{font-size:3.7rem;font-weight:500;letter-spacing:-0.045em;line-height:1;margin-top:2px;}
+  .nt{background:color-mix(in srgb, var(--s1) 94%, transparent);border-radius:18px;padding:10px 12px 11px;margin:0 10px 8px;font-size:0.7rem;flex:none;}
+  .nt-h{display:flex;align-items:center;gap:6px;font-size:0.56rem;color:var(--tx2);letter-spacing:0.04em;text-transform:uppercase;font-family:"JetBrains Mono",monospace;}
+  .nt-h .ic{width:17px;height:17px;border-radius:5px;background:var(--tx);color:var(--bg);font-size:0.5rem;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;letter-spacing:0;}
+  .nt-h .t{margin-left:auto;color:var(--tx3);text-transform:none;}
+  .nt b{display:block;font-size:0.76rem;margin-top:6px;font-weight:600;}
+  .nt p{margin:2px 0 0;color:var(--tx2);line-height:1.4;}
+  .nt .ts{display:inline-block;margin-top:6px;}
+  .stkb{height:8px;margin:-8px 22px 8px;border-radius:0 0 14px 14px;background:color-mix(in srgb, var(--s1) 60%, transparent);flex:none;}
+  .stkb.s2{margin:-8px 34px 10px;background:color-mix(in srgb, var(--s1) 40%, transparent);}
+  .nt-row{display:flex;gap:6px;margin-top:10px;}
+  .nt-row span{flex:1;text-align:center;padding:7px;border-radius:9px;background:var(--soft);font-weight:600;font-size:0.68rem;}
+  .nt-row .p{background:var(--tx);color:var(--bg);}
+  .nt-acts{margin:0 10px;border-radius:16px;overflow:hidden;background:color-mix(in srgb, var(--s1) 94%, transparent);flex:none;}
+  .nt-acts span{display:flex;justify-content:space-between;padding:11px 14px;font-size:0.76rem;border-bottom:1px solid var(--line);}
+  .nt-acts span:last-child{border-bottom:0;}
+  .nt-acts .d{color:var(--bad);}
+  .blur-dim{position:absolute;inset:0;background:color-mix(in srgb, var(--bg) 72%, transparent);}
+  .di{margin:6px auto 0;width:170px;height:30px;border-radius:20px;background:#000;color:#f2f2f2;display:flex;align-items:center;gap:8px;padding:0 12px;font-size:0.6rem;flex:none;}
+  .di .ring-s{width:16px;height:16px;border-radius:50%;background:conic-gradient(#f2f2f2 0 75%, #444 0);}
+  .di b{margin-left:auto;font-family:"JetBrains Mono",monospace;font-weight:500;}
+  .di-x{margin:10px 12px 0;border-radius:28px;background:#000;color:#f2f2f2;padding:12px 16px;font-size:0.66rem;flex:none;}
+  .di-x .row2{display:flex;align-items:center;justify-content:space-between;}
+  .la{margin:0 10px 8px;border-radius:20px;padding:12px 14px;background:color-mix(in srgb, var(--s1) 94%, transparent);flex:none;}
+  .la .segs{display:flex;gap:4px;margin-top:10px;}
+  .la .segs i{flex:1;height:5px;border-radius:3px;}
+  .la .segs i.o{opacity:0.25;}
+  .toast{position:absolute;left:14px;right:14px;bottom:66px;background:var(--tx);color:var(--bg);border-radius:12px;padding:11px 14px;font-size:0.72rem;display:flex;align-items:center;gap:8px;box-shadow:0 8px 20px rgba(0,0,0,0.18);}
+  .toast u{margin-left:auto;font-weight:600;text-underline-offset:3px;}
+  .ibanner{border:1px solid var(--tx);border-radius:12px;padding:10px 12px;font-size:0.7rem;display:flex;gap:10px;align-items:center;margin-top:8px;}
+  .ibanner .r{margin-left:auto;font-weight:600;text-decoration:underline;text-underline-offset:3px;}
+  .ibanner.soft{border-color:var(--line2);color:var(--tx2);}
+  .an{background:var(--s1);border-radius:20px;padding:12px 14px;margin:0 10px 6px;font-size:0.7rem;flex:none;}
+  .an-h{display:flex;align-items:center;gap:6px;font-size:0.6rem;color:var(--tx2);}
+  .an-h .ic{width:16px;height:16px;border-radius:50%;background:var(--tx);color:var(--bg);font-size:0.48rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .an-h .ex{margin-left:auto;color:var(--tx3);}
+  .an b{display:block;font-size:0.76rem;margin-top:6px;font-weight:600;}
+  .an p{margin:2px 0 0;color:var(--tx2);line-height:1.4;}
+  .an-acts{display:flex;gap:18px;margin-top:10px;font-size:0.64rem;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;}
+  .qs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 10px 12px;flex:none;}
+  .qs span{background:var(--s1);border-radius:16px;padding:10px 12px;font-size:0.64rem;color:var(--tx2);}
+  .qs span.on{background:var(--tx);color:var(--bg);}
+
+  /* ================= roles ================= */
+  .code{display:flex;gap:6px;justify-content:center;margin:18px 0 8px;}
+  .code span{width:30px;height:40px;border:1px solid var(--line2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:1rem;}
+  .code i{width:8px;align-self:center;height:1px;background:var(--tx3);}
+  .lock::before{content:"";display:inline-block;width:8px;height:6px;border:1.3px solid currentColor;border-radius:1.5px;margin-right:5px;position:relative;top:0;box-shadow:0 -3px 0 -1.5px transparent;}
+  .lk-i{display:inline-flex;align-items:center;gap:4px;color:var(--tx3);font-size:0.64rem;}
+  .lk-i svg{width:11px;height:11px;}
+  .req{border:1px solid var(--line2);border-radius:14px;padding:12px;margin-top:10px;}
+  .req .top2{display:flex;align-items:center;gap:8px;font-size:0.8rem;font-weight:500;}
+  .req .s{font-size:0.64rem;color:var(--tx3);margin:3px 0 0 16px;}
+  .req .imp2{font-family:"JetBrains Mono",monospace;font-size:0.6rem;color:var(--tx2);background:var(--soft);border-radius:8px;padding:7px 9px;margin:9px 0 10px;line-height:1.55;}
+
+  /* ================= strikethrough status ================= */
+  /* One line through the name. --n sessions, --d done, --m missed (rest = still to do).
+     The line is split into --n segments, filled left to right: done, then missed (red), then faint. */
+  .sk{position:relative;display:inline-block;--n:1;--d:0;--m:0;}
+  .skl{position:absolute;left:-2px;right:-1px;top:calc(50% - 1px);height:2px;display:flex;gap:3px;pointer-events:none;}
+  .skl i{flex:1;border-radius:1px;background:color-mix(in srgb, var(--tx) 22%, transparent);}
+  .skl i.d{background:var(--tx);}
+  .skl i.m{background:var(--bad);}
+  .skl.cont{gap:0;border-radius:1px;background:color-mix(in srgb, var(--tx) 22%, transparent);}
+  .skl.cont i{flex:none;background:var(--tx);}
+  .ch.miss, .smp.miss{color:var(--bad);}
+  .skip{text-decoration:line-through;text-decoration-style:dotted;text-decoration-color:var(--tx3);color:var(--tx3);}
+  .fb .cnt{font-family:"JetBrains Mono",monospace;font-size:0.46rem;color:var(--tx3);}
+  .tmain .fb .skl, .anat .skl, .sheet h4 .skl{height:2.5px;top:calc(50% - 1.25px);}
+
+  .anat{background:var(--s1);color:var(--tx);border-radius:18px;padding:8px 18px;width:460px;max-width:100%;}
+  .ar{display:grid;grid-template-columns:160px 1fr;gap:14px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center;}
+  .ar:last-child{border-bottom:0;}
+  .ar .smp{font-size:1.02rem;font-weight:500;}
+  .ar .smp small{font-family:"JetBrains Mono",monospace;font-size:0.62rem;color:var(--tx3);margin-left:6px;font-weight:400;}
+  .ar .lb2{font-size:0.68rem;color:var(--tx2);line-height:1.45;}
+  .ar .lb2 b{display:block;color:var(--tx);font-size:0.74rem;font-weight:600;}
+  .ar .smp.full{color:var(--tx3);}
+
+  .sess{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);font-size:0.84rem;}
+  .sess:last-of-type{border-bottom:0;}
+  .sess .when{font-family:"JetBrains Mono",monospace;font-size:0.58rem;color:var(--tx3);width:44px;flex:none;}
+  .sess .r{margin-left:auto;font-size:0.68rem;color:var(--tx2);display:flex;align-items:center;gap:6px;}
+  .sess .full{color:var(--tx3);}
+
+  /* ================= draft preview ================= */
+  .fb .chg{outline:1.5px dashed var(--tx);outline-offset:-4px;}
+  .fb .was{font-family:"JetBrains Mono",monospace;font-size:0.42rem;color:var(--tx3);}
+  .draftbar{display:flex;gap:8px;align-items:center;border:1px dashed var(--tx);font-size:0.64rem;padding:7px 10px;border-radius:10px;margin-top:8px;}
+  .draftbar b{font-family:"JetBrains Mono",monospace;font-weight:500;letter-spacing:0.06em;}
+  .draftbar span{margin-left:auto;color:var(--tx2);}
+  .opt{border:1px solid var(--line2);border-radius:14px;padding:11px 12px;margin-top:8px;display:flex;gap:11px;align-items:flex-start;}
+  .opt.on{border:1.5px solid var(--tx);}
+  .opt .radio{margin-top:2px;}
+  .opt b{font-size:0.8rem;font-weight:600;display:block;}
+  .opt .s{font-size:0.63rem;color:var(--tx2);margin-top:3px;display:block;line-height:1.45;}
+  .opt .tag{margin-left:auto;flex:none;}
+  .stat3{display:flex;gap:14px;font-family:"JetBrains Mono",monospace;font-size:0.62rem;color:var(--tx2);margin-top:10px;}
+  .stat3 b{color:var(--tx);font-weight:500;}
+  .who-h{display:flex;align-items:center;gap:8px;font-size:0.8rem;font-weight:600;margin-top:14px;}
+  .who-h span{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:0.6rem;color:var(--tx3);font-weight:400;}
+  .chg-row{display:flex;gap:10px;font-size:0.72rem;padding:5px 0 5px 16px;align-items:baseline;}
+  .chg-row .pm{font-family:"JetBrains Mono",monospace;width:10px;flex:none;}
+  .chg-row .d{font-family:"JetBrains Mono",monospace;font-size:0.6rem;color:var(--tx3);width:44px;flex:none;}
+  .chg-row .out{color:var(--tx3);}
+  .lane-note{font-size:0.78rem;color:var(--p-tx2);margin:4px 0 0;max-width:760px;line-height:1.55;}
+
+  /* ================= pick preview ================= */
+  .pk-strip{display:flex;gap:4px;align-items:flex-end;padding:2px 0 10px 27px;border-bottom:1px solid var(--line);}
+  .pk-strip div{display:flex;flex-direction:column;align-items:center;gap:2px;width:20px;}
+  .pk-strip span{font-family:"JetBrains Mono",monospace;font-size:0.5rem;color:var(--tx3);margin-bottom:1px;}
+  .pk-strip i{width:5px;height:5px;border-radius:50%;}
+  .pk-strip a{margin-left:auto;font-size:0.64rem;font-weight:600;text-decoration:underline;text-underline-offset:3px;align-self:center;}
+  .segx{display:flex;gap:6px;overflow:hidden;margin-top:10px;}
+  .segx span{flex:none;font-size:0.64rem;border:1px solid var(--line2);border-radius:8px;padding:5px 9px;color:var(--tx2);}
+  .segx span.on{background:var(--tx);color:var(--bg);border-color:var(--tx);font-weight:600;}
+  .totals{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:0.6rem;color:var(--tx2);margin-top:10px;}
+  .totals span{display:flex;align-items:center;gap:4px;}
+
+  /* ================= solo ================= */
+  .choice{border:1px solid var(--line2);border-radius:16px;padding:14px;margin-top:10px;}
+  .choice.on{border:1.5px solid var(--tx);}
+  .choice b{display:block;font-size:0.95rem;font-weight:600;margin-top:8px;}
+  .choice p{margin:4px 0 0;font-size:0.68rem;color:var(--tx2);line-height:1.45;}
+  .choice .ico{display:flex;gap:4px;}
+  .choice .ico i{width:9px;height:9px;border-radius:50%;background:var(--tx);}
+  .choice .ico i.o{background:transparent;border:1.5px solid var(--tx3);}
+  .min{font-family:"JetBrains Mono",monospace;font-size:0.62rem;color:var(--tx3);}
+  .load{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:150px;margin-top:14px;position:relative;}
+  .load .cap-line{position:absolute;left:0;right:0;border-top:1px dashed var(--tx2);}
+  .load .cap-line span{position:absolute;right:0;top:-13px;font-family:"JetBrains Mono",monospace;font-size:0.52rem;color:var(--tx2);background:var(--bg);padding-left:4px;}
+  .load .col{display:flex;flex-direction:column-reverse;gap:2px;height:100%;justify-content:flex-start;}
+  .load .col i{display:block;border-radius:3px;background:var(--tx);}
+  .load .col i.b{background:color-mix(in srgb, var(--tx) 55%, transparent);}
+  .load .col i.c{background:color-mix(in srgb, var(--tx) 25%, transparent);}
+  .load .col.busy{background:repeating-linear-gradient(45deg,transparent 0 4px,var(--line) 4px 5px);border-radius:4px;}
+  .load-x{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:6px;text-align:center;font-family:"JetBrains Mono",monospace;font-size:0.54rem;color:var(--tx3);}
+  .load-x b{display:block;font-size:0.7rem;color:var(--tx);font-weight:500;}
+  .load-x .tc b{background:var(--tx);color:var(--bg);border-radius:50%;width:20px;height:20px;line-height:20px;margin:0 auto;}
+  .fb.solo{grid-template-columns:44px repeat(7,1fr);}
+  .fb.solo .p{font-size:0.54rem;font-weight:500;justify-content:center;}
+  .fb.solo > div{min-height:40px;}
+</style>
+
+<div class="wrap">
+  <div class="page-top">
+    <div>
+      <h1 class="page">Chore Scheduler — minimal mono</h1>
+      <p class="lede">Every screen in the app flow, in one quiet design language, in light and dark. Colour is used only for <em>people</em>. Everything else is type, hairlines and space. Every screen has a visible way to change something, so the solver never feels like a black box.</p>
+    </div>
+    <div class="zoom-ctl" role="group" aria-label="Phone size">
+      <button type="button" data-zoom="fit" aria-pressed="true">Fit</button>
+      <button type="button" data-zoom="full" aria-pressed="false">Actual size</button>
+    </div>
+  </div>
+
+  <div class="principles">
+    <div class="pr"><b>Quiet by default</b><span>Greyscale, hairline rules, one thin numeral per screen. The only colour is each roommate's dot, so "who" reads instantly.</span></div>
+    <div class="pr"><b>Always an exit to edit</b><span>An underlined text action (Edit, Swap, Move, Pin) on every screen. Control is always one tap away, never shouting.</span></div>
+    <div class="pr"><b>Explain, don't hide</b><span>When the solver bends a rule, the app says who, when and why, in the same calm voice.</span></div>
+    <div class="pr"><b>Your overrides stick</b><span>Manual swaps can be pinned, so the next re-plan keeps them instead of quietly undoing your choice.</span></div>
+  </div>
+
+  <nav class="toc">
+    <a href="#lane-entry">1 · Entry &amp; onboarding</a><a href="#lane-today">2 · Today</a><a href="#lane-calendar">3 · Calendar</a>
+    <a href="#lane-fridge">4 · Fridge board</a><a href="#lane-team">5 · Team &amp; fairness</a><a href="#lane-setup">6 · Setup</a><a href="#lane-schedule">7 · Schedule &amp; settings</a><a href="#lane-widgets">8 · Widgets</a><a href="#lane-notifs">9 · Notifications</a><a href="#lane-roles">10 · Admin &amp; members</a><a href="#lane-status">11 · Done, partly, many times</a><a href="#lane-preview">12 · Preview before publish</a><a href="#lane-solo">13 · Solo</a>
+  </nav>
+
+  <!-- ===================== 1 ENTRY ===================== -->
+  <section class="lane" id="lane-entry">
+    <div class="lane-h"><span class="n mono">01</span><h2>Entry &amp; onboarding</h2><p>First launch → a working schedule in four steps</p></div>
+    <div class="flow">
+      <div class="node"><p class="node-cap">App launch</p><p class="node-sub">Cold start</p><div class="pair" data-dual="launch"></div></div>
+      <div class="conn"><div class="lbl">no config found</div><div class="arrow"></div></div>
+      <div class="node"><p class="node-cap">Onboarding · roommates</p><p class="node-sub">Step 1 of 3</p><div class="pair" data-dual="onb1"></div></div>
+      <div class="conn"><div class="lbl">Next</div><div class="arrow"></div><div class="lbl back">Back</div></div>
+      <div class="node"><p class="node-cap">Onboarding · chores</p><p class="node-sub">Step 2 of 3, presets you can tune</p><div class="pair" data-dual="onb2"></div></div>
+      <div class="conn"><div class="lbl">Next</div><div class="arrow"></div><div class="lbl back">Back</div></div>
+      <div class="node"><p class="node-cap">Onboarding · availability</p><p class="node-sub">Step 3 of 3: days off, exclusions, rest buffer</p><div class="pair" data-dual="onb3"></div></div>
+    </div>
+    <div class="flow">
+      <div class="ref"><b>From step 3</b>tap "Build schedule"</div>
+      <div class="conn"><div class="lbl">Build schedule</div><div class="arrow"></div></div>
+      <div class="node"><p class="node-cap">Building</p><p class="node-sub">All 6 algorithms run, then the rest polish</p><div class="pair" data-dual="gen"></div></div>
+      <div class="conn"><div class="lbl">done</div><div class="arrow"></div></div>
+      <div class="node"><p class="node-cap">Pick a schedule</p><p class="node-sub">Same ranking as main.py. The selected row shows its first week</p><div class="pair" data-dual="pick"></div></div>
+      <div class="conn"><div class="lbl">Preview</div><div class="arrow"></div><div class="lbl back">back</div></div>
+      <div class="node"><p class="node-cap">Preview candidate</p><p class="node-sub">The full board for any of the 6, week by week, before anything is saved</p><div class="pair" data-dual="pickprev"></div></div>
+      <div class="conn"><div class="lbl">Use MILP</div><div class="arrow"></div></div>
+      <div class="ref"><b>→ Today</b>Home screen, lane 02</div>
+    </div>
+  </section>
+
+  <!-- ===================== 2 TODAY ===================== -->
+  <section class="lane" id="lane-today">
+    <div class="lane-h"><span class="n mono">02</span><h2>Today</h2><p>Default home: what's due and who's on it</p></div>
+    <div class="flow">
+      <div class="node"><p class="node-cap">Today</p><p class="node-sub">Tick, edit, or jump to the week</p><div class="pair" data-dual="today"></div></div>
+      <div class="conn"><div class="lbl">tap a task</div><div class="arrow"></div><div class="lbl back">mark done / back</div></div>
+      <div class="node"><p class="node-cap">Task detail</p><p class="node-sub">Done, swap, move within tolerance, skip</p><div class="pair" data-dual="task"></div></div>
+      <div class="conn"><div class="lbl">Swap</div><div class="arrow"></div><div class="lbl back">swap / cancel</div></div>
+      <div class="node"><p class="node-cap">Swap sheet</p><p class="node-sub">Shows the rest impact for each person, plus an option to pin</p><div class="pair" data-dual="swap"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================== 3 CALENDAR ===================== -->
+  <section class="lane" id="lane-calendar">
+    <div class="lane-h"><span class="n mono">03</span><h2>Weekly calendar</h2><p>The week ahead, drilling into a day</p></div>
+    <div class="flow">
+      <div class="node"><p class="node-cap">Week</p><p class="node-sub">Grid view. List, Fridge and Only-me are one tap away</p><div class="pair" data-dual="week"></div></div>
+      <div class="conn"><div class="lbl">tap a day</div><div class="arrow"></div><div class="lbl back">back</div></div>
+      <div class="node"><p class="node-cap">Day detail</p><p class="node-sub">Tasks plus who's free, off or resting</p><div class="pair" data-dual="day"></div></div>
+      <div class="conn"><div class="lbl">tap a task</div><div class="arrow"></div></div>
+      <div class="ref"><b>→ Task detail</b>Same screen as lane 02</div>
+    </div>
+  </section>
+
+  <!-- ===================== 4 FRIDGE BOARD ===================== -->
+  <section class="lane" id="lane-fridge">
+    <div class="lane-h"><span class="n mono">04</span><h2>Fridge board</h2><p>The printed PDF you tick by hand, made digital</p></div>
+    <div class="flow">
+      <div class="ref"><b>From Week</b>tap "Fridge"</div>
+      <div class="conn"><div class="lbl">Fridge</div><div class="arrow"></div><div class="lbl back">Grid</div></div>
+      <div class="node"><p class="node-cap">Fridge board · phone</p><p class="node-sub">Person × day, as on paper. Tap a name to strike it through, like a pen</p><div class="pair" data-dual="fridge"></div></div>
+      <div class="conn"><div class="lbl">tap a box</div><div class="arrow"></div><div class="lbl back">save</div></div>
+      <div class="node"><p class="node-cap">Mark sheet</p><p class="node-sub">Done, missed, or covered by someone else</p><div class="pair" data-dual="fridgemark"></div></div>
+    </div>
+    <div class="flow">
+      <div class="node"><p class="node-cap">Fridge board · kitchen tablet</p><p class="node-sub">Always-on landscape mode for a tablet stuck on the fridge. Big targets, no login, today pinned on the right</p><div class="pair" data-dual="fridgetab" data-frame="tablet"></div></div>
+    </div>
+  </section>
+
+
+  <!-- ===================== 4 TEAM ===================== -->
+  <section class="lane" id="lane-team">
+    <div class="lane-h"><span class="n mono">05</span><h2>Team &amp; fairness</h2><p>Is the workload actually even?</p></div>
+    <div class="flow">
+      <div class="node"><p class="node-cap">Household</p><p class="node-sub">People and headline fairness</p><div class="pair" data-dual="house"></div></div>
+      <div class="conn"><div class="lbl">tap a person</div><div class="arrow"></div><div class="lbl back">back</div></div>
+      <div class="node"><p class="node-cap">Person</p><p class="node-sub">Share of each chore against eligible peers</p><div class="pair" data-dual="person"></div></div>
+      <div class="conn"><div class="lbl">Edit</div><div class="arrow"></div><div class="lbl back">save / cancel</div></div>
+      <div class="node"><p class="node-cap">Edit person</p><p class="node-sub">Days off and "never assign" exclusions</p><div class="pair" data-dual="editperson"></div></div>
+    </div>
+    <div class="flow">
+      <div class="ref"><b>From Household</b>tap a fairness row</div>
+      <div class="conn"><div class="lbl">tap fairness</div><div class="arrow"></div><div class="lbl back">back</div></div>
+      <div class="node"><p class="node-cap">Fairness detail</p><p class="node-sub">The 5-step ranking and the totals-vs-per-chore choice</p><div class="pair" data-dual="fair"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================== 5 SETUP ===================== -->
+  <section class="lane" id="lane-setup">
+    <div class="lane-h"><span class="n mono">06</span><h2>Setup</h2><p>The mobile version of config.yml</p></div>
+    <div class="flow">
+      <div class="node"><p class="node-cap">Setup</p><p class="node-sub">Chores, house rules, schedule</p><div class="pair" data-dual="setup"></div></div>
+      <div class="conn"><div class="lbl">tap a chore</div><div class="arrow"></div><div class="lbl back">save / delete / cancel</div></div>
+      <div class="node"><p class="node-cap">Edit chore</p><p class="node-sub">Every N days, tolerance, who can do it</p><div class="pair" data-dual="editchore"></div></div>
+    </div>
+    <div class="flow">
+      <div class="ref"><b>From Setup</b>tap "+ Add"</div>
+      <div class="conn"><div class="lbl">+ Add</div><div class="arrow"></div><div class="lbl back">add / cancel</div></div>
+      <div class="node"><p class="node-cap">Add chore</p><p class="node-sub">Same form, shown in piggyback mode</p><div class="pair" data-dual="addchore"></div></div>
+    </div>
+    <div class="flow">
+      <div class="ref"><b>From Setup</b>tap a house rule</div>
+      <div class="conn"><div class="lbl">tap a rule</div><div class="arrow"></div><div class="lbl back">save / back</div></div>
+      <div class="node"><p class="node-cap">Edit house rule</p><p class="node-sub">Rest buffer, with a live preview of its impact</p><div class="pair" data-dual="editrule"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================== 6 SCHEDULE & SETTINGS ===================== -->
+  <section class="lane" id="lane-schedule">
+    <div class="lane-h"><span class="n mono">07</span><h2>Schedule &amp; settings</h2><p>Health, month rollover, personalisation</p></div>
+    <div class="flow">
+      <div class="ref"><b>From Setup</b>tap "Health &amp; re-plan"</div>
+      <div class="conn"><div class="lbl">open</div><div class="arrow"></div></div>
+      <div class="node"><p class="node-cap">Schedule health</p><p class="node-sub">Unavoidable exceptions, explained</p><div class="pair" data-dual="health"></div></div>
+      <div class="conn"><div class="lbl">Wrap up month</div><div class="arrow"></div><div class="lbl back">back</div></div>
+      <div class="node"><p class="node-cap">Wrap up &amp; next month</p><p class="node-sub">Carry-over, re-plan, export</p><div class="pair" data-dual="wrap"></div></div>
+      <div class="conn"><div class="lbl">Generate</div><div class="arrow"></div></div>
+      <div class="ref"><b>→ Building</b>then Pick a schedule (lane 01)</div>
+    </div>
+    <div class="flow">
+      <div class="ref"><b>From any tab</b>tap your avatar</div>
+      <div class="conn"><div class="lbl">avatar</div><div class="arrow"></div><div class="lbl back">back</div></div>
+      <div class="node"><p class="node-cap">Customize</p><p class="node-sub">Appearance, what Today shows, reminders</p><div class="pair" data-dual="custom"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================== 7 WIDGETS ===================== -->
+  <section class="lane" id="lane-widgets">
+    <div class="lane-h"><span class="n mono">08</span><h2>Widgets</h2><p>Home screen, lock screen, and how to configure them</p></div>
+
+    <div class="wcard">
+      <div class="winfo"><h3>Small: glance</h3><div class="sz mono">2 × 2 · 158 pt</div>
+        <ul><li><b>Next for you</b>: your next task and how far away it is</li><li><b>Today</b>: house progress ring and what's left</li><li><b>Rest</b>: days until your next task</li></ul></div>
+      <div class="wpair" data-wdual="w-small1"></div>
+    </div>
+
+    <div class="wcard">
+      <div class="winfo"><h3>Small: act &amp; fairness</h3><div class="sz mono">2 × 2 · interactive</div>
+        <ul><li><b>Mark done</b>: tick your task without opening the app</li><li><b>Fairness</b>: this month's task counts per person</li></ul></div>
+      <div class="wpair" data-wdual="w-small2"></div>
+    </div>
+
+    <div class="wcard">
+      <div class="winfo"><h3>Medium</h3><div class="sz mono">4 × 2 · 338 × 158 pt</div>
+        <ul><li><b>Today list</b>: every task due today, tappable checkboxes</li><li><b>This week</b>: seven days, one dot per assignment</li></ul></div>
+      <div class="wpair" data-wdual="w-medium"></div>
+    </div>
+
+    <div class="wcard">
+      <div class="winfo"><h3>Medium &amp; strip</h3><div class="sz mono">4 × 2 · 4 × 1</div>
+        <ul><li><b>Workload</b>: tasks per person, plus the spread</li><li><b>Strip</b>: one-line Today for Android-style 4×1 slots</li></ul></div>
+      <div class="wpair" data-wdual="w-medium2"></div>
+    </div>
+
+    <div class="wcard">
+      <div class="winfo"><h3>Large</h3><div class="sz mono">4 × 4 · 338 × 354 pt</div>
+        <ul><li><b>Week agenda</b>: the whole week; today is marked and past days fade</li></ul></div>
+      <div class="wpair" data-wdual="w-large"></div>
+    </div>
+
+    <div class="wcard">
+      <div class="winfo"><h3>Large: fridge board</h3><div class="sz mono">4 × 4 · interactive</div>
+        <ul><li>The paper grid on your home screen</li><li>Tap a name to strike it through</li><li>Great on a kitchen tablet's home screen</li></ul></div>
+      <div class="wpair" data-wdual="w-fridge"></div>
+    </div>
+
+    <div class="wcard">
+      <div class="winfo"><h3>Lock screen</h3><div class="sz mono">circular · rectangular · inline</div>
+        <ul><li><b>Inline</b>: next to the date</li><li><b>Circular</b>: house progress, days until yours</li><li><b>Rectangular</b>: next task, what's left today</li></ul></div>
+      <div class="wpair" data-wdual="w-lock"></div>
+    </div>
+
+    <div class="wcard">
+      <div class="winfo"><h3>Edit widget</h3><div class="sz mono">long-press → edit</div>
+        <ul><li>Show <b>me</b> or the <b>whole house</b></li><li>Range: today, 3 days, week</li><li>Tap action: open, or mark done</li></ul></div>
+      <div class="wpair" data-wdual="w-edit"></div>
+    </div>
+  </section>
+
+  <!-- ===================== 9 NOTIFICATIONS ===================== -->
+  <section class="lane" id="lane-notifs">
+    <div class="lane-h"><span class="n mono">09</span><h2>Notifications</h2><p>Calm by default, loud only when someone has to act</p></div>
+    <div class="flow">
+      <div class="node"><p class="node-cap">Lock screen · stack</p><p class="node-sub">Morning digest, grouped progress, one time-sensitive nudge</p><div class="pair" data-dual="n-lock"></div></div>
+      <div class="conn"><div class="lbl">long-press</div><div class="arrow"></div><div class="lbl back">dismiss</div></div>
+      <div class="node"><p class="node-cap">Expanded · actions</p><p class="node-sub">Act without opening the app</p><div class="pair" data-dual="n-expand"></div></div>
+    </div>
+    <div class="flow">
+      <div class="node"><p class="node-cap">Heads-up banner</p><p class="node-sub">A swap request while you're in the app: accept in place</p><div class="pair" data-dual="n-banner"></div></div>
+      <div class="conn"><div class="lbl">today in progress</div><div class="arrow"></div></div>
+      <div class="node"><p class="node-cap">Live Activity · Dynamic Island</p><p class="node-sub">House progress for the day, compact in the island</p><div class="pair" data-dual="n-live"></div></div>
+    </div>
+    <div class="flow">
+      <div class="node"><p class="node-cap">In-app · banner &amp; toast</p><p class="node-sub">Re-plan changes up top; undo after a tick</p><div class="pair" data-dual="n-inapp"></div></div>
+      <div class="conn"><div class="lbl">Android</div><div class="arrow"></div></div>
+      <div class="node"><p class="node-cap">Android · shade</p><p class="node-sub">Same content, platform action buttons</p><div class="pair" data-dual="n-android"></div></div>
+      <div class="conn"><div class="lbl">Customize → Notifications</div><div class="arrow"></div><div class="lbl back">back</div></div>
+      <div class="node"><p class="node-cap">Notification settings</p><p class="node-sub">Per type, style and quiet hours</p><div class="pair" data-dual="n-settings"></div></div>
+    </div>
+
+    <h3 class="tbl-h">Notification catalog</h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Notification</th><th>Who gets it</th><th>When</th><th>Level</th><th>Actions</th></tr></thead>
+      <tbody>
+        <tr><td>Morning digest</td><td>Everyone</td><td>08:00 (editable)</td><td><span class="lvl">passive</span></td><td>Open</td></tr>
+        <tr><td>Your task is still open</td><td>Assignee</td><td>20:00 if not ticked</td><td><span class="lvl hi">time-sensitive</span></td><td>Done · Snooze · Swap</td></tr>
+        <tr><td>Housemate finished a task</td><td>Everyone else</td><td>On tick</td><td><span class="lvl">silent · grouped</span></td><td>None</td></tr>
+        <tr><td>Swap request</td><td>The person asked</td><td>On request</td><td><span class="lvl act">active</span></td><td>Accept · Decline</td></tr>
+        <tr><td>Day-off / swap needs approval</td><td>Admins</td><td>On request</td><td><span class="lvl act">active</span></td><td>Approve · Decline</td></tr>
+        <tr><td>Task missed (✗)</td><td>Assignee + admins</td><td>Next morning</td><td><span class="lvl act">active</span></td><td>Make up · Reassign</td></tr>
+        <tr><td>Schedule re-planned</td><td>Everyone</td><td>After "Generate"</td><td><span class="lvl act">active</span></td><td>Review changes</td></tr>
+        <tr><td>Plan ending soon</td><td>Admins</td><td>2 days before the window ends</td><td><span class="lvl">passive</span></td><td>Wrap up month</td></tr>
+        <tr><td>Weekly fairness summary</td><td>Everyone</td><td>Sun 19:00</td><td><span class="lvl">passive</span></td><td>Open</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ===================== 10 ROLES ===================== -->
+  <section class="lane" id="lane-roles">
+    <div class="lane-h"><span class="n mono">10</span><h2>Admin &amp; members</h2><p>Who can change the rules, who can only play by them</p></div>
+    <div class="flow">
+      <div class="node"><p class="node-cap">Members · admin view</p><p class="node-sub">Roles, pending invites, the kitchen tablet as a device</p><div class="pair" data-dual="r-members"></div></div>
+      <div class="conn"><div class="lbl">Invite</div><div class="arrow"></div><div class="lbl back">done</div></div>
+      <div class="node"><p class="node-cap">Invite</p><p class="node-sub">Code or link, pick the role up front</p><div class="pair" data-dual="r-invite"></div></div>
+      <div class="conn"><div class="lbl">Permissions</div><div class="arrow"></div><div class="lbl back">back</div></div>
+      <div class="node"><p class="node-cap">Permissions</p><p class="node-sub">What members (and the board) may do</p><div class="pair" data-dual="r-perms"></div></div>
+    </div>
+    <div class="flow">
+      <div class="ref"><b>Member side</b>Bob opens Setup</div>
+      <div class="conn"><div class="lbl">Setup tab</div><div class="arrow"></div></div>
+      <div class="node"><p class="node-cap">Setup · member view</p><p class="node-sub">Read-only rules, editable personal settings</p><div class="pair" data-dual="r-memsetup"></div></div>
+      <div class="conn"><div class="lbl">Request change</div><div class="arrow"></div><div class="lbl back">sent</div></div>
+      <div class="node"><p class="node-cap">Request sheet</p><p class="node-sub">Impact shown before it's sent</p><div class="pair" data-dual="r-request"></div></div>
+      <div class="conn"><div class="lbl">notifies admins</div><div class="arrow"></div></div>
+      <div class="node"><p class="node-cap">Requests · admin inbox</p><p class="node-sub">Approve with the solver's impact preview</p><div class="pair" data-dual="r-approvals"></div></div>
+    </div>
+
+    <h3 class="tbl-h">Capability matrix <span>defaults; admins can change the ones marked ⚙</span></h3>
+    <div class="tbl-wrap"><table class="tbl cap-tbl">
+      <thead><tr><th>Capability</th><th>Admin</th><th>Member</th><th>Kitchen board</th></tr></thead>
+      <tbody>
+        <tr><td>See the schedule &amp; fridge board</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Tick own tasks</td><td>✓</td><td>✓</td><td class="na">n/a</td></tr>
+        <tr><td>Tick anyone's box ⚙</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Swap a task ⚙</td><td>✓</td><td>direct</td><td class="na">–</td></tr>
+        <tr><td>Add own days off ⚙</td><td>✓</td><td>request</td><td class="na">–</td></tr>
+        <tr><td>Edit others' days off &amp; exclusions</td><td>✓</td><td class="na">–</td><td class="na">–</td></tr>
+        <tr><td>Edit chores &amp; house rules</td><td>✓</td><td class="na">request</td><td class="na">–</td></tr>
+        <tr><td>Re-plan, pick algorithm, pin overrides</td><td>✓</td><td class="na">–</td><td class="na">–</td></tr>
+        <tr><td>Export CSV / DOCX / PDF</td><td>✓</td><td>PDF only</td><td class="na">–</td></tr>
+        <tr><td>See fairness numbers ⚙</td><td>✓</td><td>✓</td><td>off</td></tr>
+        <tr><td>Invite, remove, change roles</td><td>✓</td><td class="na">–</td><td class="na">–</td></tr>
+        <tr><td>Approve requests</td><td>✓</td><td class="na">–</td><td class="na">–</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ===================== 11 STATUS BY STRIKETHROUGH ===================== -->
+  <section class="lane" id="lane-status">
+    <div class="lane-h"><span class="n mono">11</span><h2>Done, partly done, many times a day</h2><p>Strike the name through, like a pen on the fridge sheet</p></div>
+
+    <div class="wcard">
+      <div class="winfo"><h3>Status anatomy</h3><div class="sz mono">one rule for every chore</div>
+        <ul>
+          <li>The <b>line</b> is the record. Its <b>colour</b> says how it went.</li>
+          <li>Several times a day: one segment per session, left to right.</li>
+          <li>Up to 4 sessions get segments. 5 or more get one continuous line plus a count.</li>
+          <li>Named steps (Sweep/Trash): strike only the part that's done.</li>
+        </ul></div>
+      <div class="wpair" data-wdual="st-anatomy"></div>
+    </div>
+
+    <div class="flow">
+      <div class="node"><p class="node-cap">Fridge board · dishes 3× a day</p><p class="node-sub">Same grid. Dishes now shows breakfast · lunch · dinner as three segments</p><div class="pair" data-dual="fridge3"></div></div>
+      <div class="conn"><div class="lbl">tap Dish</div><div class="arrow"></div><div class="lbl back">done</div></div>
+      <div class="node"><p class="node-cap">Session sheet</p><p class="node-sub">Strike each session; mark who covered one</p><div class="pair" data-dual="sessions"></div></div>
+      <div class="conn"><div class="lbl">Setup → Dishes</div><div class="arrow"></div><div class="lbl back">save</div></div>
+      <div class="node"><p class="node-cap">Edit chore · times per day</p><p class="node-sub">One person all day, or split between people</p><div class="pair" data-dual="editsessions"></div></div>
+    </div>
+  </section>
+
+  <!-- ===================== 12 PREVIEW BEFORE PUBLISH ===================== -->
+  <section class="lane" id="lane-preview">
+    <div class="lane-h"><span class="n mono">12</span><h2>Preview before publish</h2><p>Admins see the schedule a decision creates, before anyone else does</p></div>
+    <div class="flow">
+      <div class="ref"><b>From Requests</b>"Preview &amp; approve" on Bob's day off</div>
+      <div class="conn"><div class="lbl">preview</div><div class="arrow"></div></div>
+      <div class="node"><p class="node-cap">Cover options</p><p class="node-sub">The solver proposes ways to absorb the request</p><div class="pair" data-dual="p-options"></div></div>
+      <div class="conn"><div class="lbl">Preview on board</div><div class="arrow"></div><div class="lbl back">back</div></div>
+      <div class="node"><p class="node-cap">Draft board</p><p class="node-sub">The week as it would be. Changed boxes are outlined; flip A / B / C</p><div class="pair" data-dual="p-draft"></div></div>
+      <div class="conn"><div class="lbl">See who's affected</div><div class="arrow"></div><div class="lbl back">back</div></div>
+      <div class="node"><p class="node-cap">Changes per person</p><p class="node-sub">Exactly what each person gains or loses, then publish</p><div class="pair" data-dual="p-diff"></div></div>
+    </div>
+    <p class="lane-note">The same draft board opens from <b>Pick a schedule → Preview</b> (lane 01) and <b>Wrap up → Generate</b> (lane 07). There, the A / B / C switch flips between the 6 algorithms' schedules instead of cover options.</p>
+  </section>
+
+  <!-- ===================== 13 SOLO ===================== -->
+  <section class="lane" id="lane-solo">
+    <div class="lane-h"><span class="n mono">13</span><h2>Solo: just me</h2><p>Fair between days instead of between people</p></div>
+    <div class="flow">
+      <div class="ref"><b>From App launch</b>first question of onboarding</div>
+      <div class="conn"><div class="lbl">first launch</div><div class="arrow"></div></div>
+      <div class="node"><p class="node-cap">Who's this for?</p><p class="node-sub">The one fork in onboarding. Household continues to lane 01</p><div class="pair" data-dual="s-fork"></div></div>
+      <div class="conn"><div class="lbl">Just me</div><div class="arrow"></div><div class="lbl back">back</div></div>
+      <div class="node"><p class="node-cap">Solo setup</p><p class="node-sub">Chores with rough minutes, a daily cap, busy days</p><div class="pair" data-dual="s-setup"></div></div>
+      <div class="conn"><div class="lbl">Build my week</div><div class="arrow"></div></div>
+      <div class="ref"><b>→ Building &amp; Pick</b>Same as lane 01, ranked for solo</div>
+    </div>
+    <div class="flow">
+      <div class="node"><p class="node-cap">Solo Today</p><p class="node-sub">Minutes, not names. Three tabs, no Team</p><div class="pair" data-dual="s-today"></div></div>
+      <div class="conn"><div class="lbl">Week tab</div><div class="arrow"></div><div class="lbl back">Today</div></div>
+      <div class="node"><p class="node-cap">Week load</p><p class="node-sub">Minutes per day against your cap. Busy days stay light</p><div class="pair" data-dual="s-week"></div></div>
+      <div class="conn"><div class="lbl">Board</div><div class="arrow"></div><div class="lbl back">Load</div></div>
+      <div class="node"><p class="node-cap">Solo fridge board</p><p class="node-sub">Rows are chores instead of people. Strike to mark done</p><div class="pair" data-dual="s-board"></div></div>
+    </div>
+
+    <h3 class="tbl-h">Household → solo <span>same solver, different question</span></h3>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Household</th><th>Solo</th><th>What the backend needs</th></tr></thead>
+      <tbody>
+        <tr><td>One task per person per day</td><td>Several chores a day, up to a daily cap (minutes or count)</td><td>Replace the hard "≤ 1 task/day" rule with a capacity limit</td></tr>
+        <tr><td>Rest buffer between tasks</td><td>Max effort per day; spacing comes from each chore's frequency</td><td>Buffer off; frequency, tolerance and cadence unchanged</td></tr>
+        <tr><td>Workload spread between people</td><td>Load spread between <b>days</b>: no heavy Saturdays</td><td>Minimise max-minus-min daily minutes (the same staged MILP idea)</td></tr>
+        <tr><td>Days off</td><td>Busy days: a lower cap, not zero</td><td>Per-weekday capacity</td></tr>
+        <tr><td>Exclusions, swaps, roles, approvals</td><td>Hidden</td><td>Not used</td></tr>
+        <tr><td>Fridge board: people × days</td><td>Chores × days</td><td>UI only</td></tr>
+        <tr><td>Add a roommate later</td><td>Setup → "Living with someone?" turns it into a household</td><td>Keeps history; the next plan becomes a household plan</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+
+
+
+</div>
+
+<!-- ======================================================================
+     SCREEN TEMPLATES: each is cloned into a light and a dark frame
+     ====================================================================== -->
+
+<template id="launch"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <div class="mark">chores</div>
+    <div class="dots4"><i style="background:var(--alice)"></i><i style="background:var(--bob)"></i><i style="background:var(--carol)"></i><i style="background:var(--dave)"></i></div>
+    <div class="cap" style="margin-top:16px;">fair by design</div>
+  </div>
+  <div class="ft" style="padding-bottom:44px;">
+    <div class="line" style="margin:0 60px 10px;"><i style="width:40%"></i></div>
+    <div class="cap" style="text-align:center;">looking for your household…</div>
+  </div>
+</div></template>
+
+<template id="onb1"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="cap">Step 1 / 3</span><span class="act">Skip</span></div>
+  <div style="padding:0 20px;flex:none;"><div class="prog"><span class="on"></span><span></span><span></span></div></div>
+  <div class="hd" style="margin-top:18px;"><h3>Who lives here?</h3><p>Everyone who shares chores. You can change this any time.</p></div>
+  <div class="bd">
+    <div class="li"><span class="dot" style="background:var(--alice)"></span>Alice<span class="r">×</span></div>
+    <div class="li"><span class="dot" style="background:var(--bob)"></span>Bob<span class="r">×</span></div>
+    <div class="li"><span class="dot" style="background:var(--carol)"></span>Carol<span class="r">×</span></div>
+    <div class="li"><span class="dot" style="background:var(--dave)"></span>Dave <span class="tag">you</span><span class="r">×</span></div>
+    <div class="li end" style="color:var(--tx3);"><span class="dot" style="border:1px dashed var(--tx3);"></span>Add roommate…</div>
+    <p class="note">Tap a dot to change someone's colour. Order doesn't matter: it's shuffled every run so nobody is always picked first.</p>
+  </div>
+  <div class="ft"><div class="btn">Next: chores</div></div>
+</div></template>
+
+<template id="onb2"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Back</span><span class="cap">Step 2 / 3</span></div>
+  <div style="padding:0 20px;flex:none;"><div class="prog"><span class="on"></span><span class="on"></span><span></span></div></div>
+  <div class="hd" style="margin-top:18px;"><h3>What needs doing?</h3><p>Start from common chores, then tune how often.</p></div>
+  <div class="bd">
+    <div class="li"><span class="tg on"></span><div>Dishes<span class="s">every day</span></div><span class="r mono gt">1d</span></div>
+    <div class="li"><span class="tg on"></span><div>Trash<span class="s">weekly, ±1 day</span></div><span class="r mono gt">7d</span></div>
+    <div class="li"><span class="tg on"></span><div>Vacuum<span class="s">every 3 days, ±1</span></div><span class="r mono gt">3d</span></div>
+    <div class="li"><span class="tg on"></span><div>Mop<span class="s">with every 2nd vacuum</span></div><span class="r mono gt">2×</span></div>
+    <div class="li dis"><span class="tg"></span><div>Bathroom<span class="s">weekly</span></div><span class="r mono gt">7d</span></div>
+    <div class="li end" style="color:var(--tx3);"><span style="width:32px;text-align:center;">+</span>Custom chore…</div>
+  </div>
+  <div class="ft"><div class="btn">Next: availability</div></div>
+</div></template>
+
+<template id="onb3"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Back</span><span class="cap">Step 3 / 3</span></div>
+  <div style="padding:0 20px;flex:none;"><div class="prog"><span class="on"></span><span class="on"></span><span class="on"></span></div></div>
+  <div class="hd" style="margin-top:18px;"><h3>Who's around when?</h3><p>Tap a day to mark someone off. Optional, and editable later.</p></div>
+  <div class="bd">
+    <div style="margin-top:8px;font-size:0.74rem;display:flex;align-items:center;gap:6px;"><span class="dot" style="background:var(--alice)"></span>Alice</div>
+    <div class="wk"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+    <div style="margin-top:10px;font-size:0.74rem;display:flex;align-items:center;gap:6px;"><span class="dot" style="background:var(--bob)"></span>Bob</div>
+    <div class="wk"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span class="off">S</span><span class="off">S</span></div>
+    <div style="margin-top:10px;font-size:0.74rem;display:flex;align-items:center;gap:6px;"><span class="dot" style="background:var(--carol)"></span>Carol</div>
+    <div class="wk"><span>M</span><span>T</span><span>W</span><span>T</span><span class="off">F</span><span>S</span><span>S</span></div>
+    <div style="margin-top:10px;font-size:0.74rem;display:flex;align-items:center;gap:6px;"><span class="dot" style="background:var(--dave)"></span>Dave</div>
+    <div class="wk"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+    <div class="kv" style="margin-top:12px;border-top:1px solid var(--line);"><span class="k">Never assign</span><span>Bob → Mop <span class="act" style="margin-left:6px;">+</span></span></div>
+    <div class="kv"><span class="k">Rest after any task</span><span class="stp"><span>−</span><b>2d</b><span>+</span></span></div>
+  </div>
+  <div class="ft"><div class="btn">Build schedule</div></div>
+</div></template>
+
+<template id="gen"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span></span><span class="act">Cancel</span></div>
+  <div class="hd" style="margin-top:10px;"><h3>Building your schedule</h3><p>Six algorithms solve the same rules. You'll pick the result.</p></div>
+  <div class="bd">
+    <div class="li" style="margin-top:6px;"><span class="st mono">✓</span>MILP<span class="r mono">optimal · 0.8s</span></div>
+    <div class="li"><span class="st mono">✓</span>Greedy<span class="r mono">0.01s</span></div>
+    <div class="li"><span class="st mono">✓</span>Simulated annealing<span class="r mono">1.2s</span></div>
+    <div class="li"><span class="st mono">✓</span>Tabu search<span class="r mono">1.0s</span></div>
+    <div class="li"><span class="st mono">◐</span><div style="flex:1;">Genetic algorithm<div class="line" style="margin-top:6px;"><i style="width:62%"></i></div></div><span class="r mono">gen 93/150</span></div>
+    <div class="li"><span class="st mono">✓</span>Hungarian<span class="r mono">0.02s</span></div>
+    <div class="sh"><span class="cap">then</span></div>
+    <div class="li end dis"><span class="st mono">○</span>Rest polish · beam search<span class="r mono">queued</span></div>
+  </div>
+  <div class="ft"><p class="note" style="text-align:center;margin:0;">Usually under 10 seconds</p></div>
+</div></template>
+
+<template id="pick"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Back</span><span class="act">How ranking works</span></div>
+  <div class="hd"><h3>Pick a schedule</h3><p>Ranked by rule breaks, then rest, then fairness. Only MILP is proven optimal.</p></div>
+  <div class="bd">
+    <div class="li" style="min-height:30px;padding:12px 0 6px;"><span class="cap" style="width:16px;">#</span><span class="cap">algorithm</span><span class="r cap">exc · spread</span></div>
+    <div class="li" style="border-bottom:0;padding-bottom:4px;"><span class="radio on"></span><div>MILP <span class="tag inv">proven</span></div><span class="r mono">3 · 1</span></div>
+    <div class="pk-strip">
+      <div><span>M</span><i style="background:var(--carol)"></i></div><div><span>T</span><i style="background:var(--alice)"></i></div><div><span>W</span><i style="background:var(--dave)"></i><i style="background:var(--carol)"></i><i style="background:var(--alice)"></i></div><div><span>T</span><i style="background:var(--bob)"></i></div><div><span>F</span><i style="background:var(--alice)"></i></div><div><span>S</span><i style="background:var(--carol)"></i><i style="background:var(--dave)"></i></div><div><span>S</span><i style="background:var(--alice)"></i></div>
+      <a>Preview ›</a>
+    </div>
+    <div class="li"><span class="radio"></span>Hungarian<span class="r mono">3 · 2</span></div>
+    <div class="li"><span class="radio"></span>Tabu search<span class="r mono">4 · 1</span></div>
+    <div class="li"><span class="radio"></span>Simulated annealing<span class="r mono">4 · 2</span></div>
+    <div class="li"><span class="radio"></span>Genetic<span class="r mono">5 · 2</span></div>
+    <div class="li end"><span class="radio"></span>Greedy<span class="r mono">6 · 3</span></div>
+  </div>
+  <div class="ft"><p class="note" style="margin:0 0 8px;">exc = rule exceptions · spread = most minus fewest tasks</p><div class="row"><div class="btn gh">Preview</div><div class="btn">Use MILP</div></div></div>
+</div></template>
+
+<template id="today"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="cap">Today</span><span class="av">D</span></div>
+  <div class="dt"><div class="big">12</div><div class="dside"><b>Wednesday</b>August</div><div class="dct mono">3/4<span>done</span></div></div>
+  <div style="padding:0 20px;flex:none;"><div class="line"><i style="width:75%"></i></div></div>
+  <div class="bd">
+    <div class="sh"><span class="cap">Yours</span></div>
+    <div class="li"><span class="ck on"></span><span class="x">Dishes</span><span class="r mono">8:12</span></div>
+    <div class="sh"><span class="cap">House</span><a>Edit</a></div>
+    <div class="li"><span class="ck on"></span><span class="x">Trash</span><span class="r"><span class="dot" style="background:var(--carol)"></span>Carol</span></div>
+    <div class="li"><span class="ck on"></span><span class="x">Vacuum</span><span class="r"><span class="dot" style="background:var(--alice)"></span>Alice</span></div>
+    <div class="li end"><span class="ck"></span><div>Mop<span class="s mono">2ND VACUUM</span></div><span class="r"><span class="dot" style="background:var(--alice)"></span>Alice</span></div>
+    <div class="sh"><span class="cap">Next 4 days</span><a>Week</a></div>
+    <div class="mr"><span class="d mono">THU 13</span>Dishes<span class="w2"><span class="dot" style="background:var(--bob)"></span></span></div>
+    <div class="mr"><span class="d mono">FRI 14</span>Dishes<span class="w2"><span class="dot" style="background:var(--alice)"></span></span></div>
+    <div class="mr"><span class="d mono">SAT 15</span>Dishes, Vacuum<span class="w2"><span class="dot" style="background:var(--carol)"></span><span class="dot" style="background:var(--dave)"></span></span></div>
+    <div class="mr"><span class="d mono">SUN 16</span>Dishes<span class="w2"><span class="dot" style="background:var(--alice)"></span></span></div>
+  </div>
+  <div class="tabs"><span class="on">Today</span><span>Calendar</span><span>Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="task"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Today</span><span class="act">Edit chore</span></div>
+  <div class="hd"><span class="cap">Wed 12 Aug · due today</span><h3 style="margin-top:4px;">Mop</h3><p>Rides on every 2nd Vacuum, within ±1 day.</p></div>
+  <div class="bd">
+    <div class="kv" style="margin-top:8px;border-top:1px solid var(--line);"><span class="k">Assigned</span><span style="display:flex;align-items:center;gap:6px;"><span class="dot" style="background:var(--alice)"></span>Alice</span></div>
+    <div class="kv"><span class="k">Rest before</span><span>2 days <span class="tag ok">ok</span></span></div>
+    <div class="kv"><span class="k">Next time</span><span class="mono" style="font-size:0.7rem;">TUE 18 · Dave</span></div>
+    <div class="btn" style="margin-top:14px;">Mark done</div>
+    <div class="row" style="margin-top:8px;"><div class="btn gh sm">Swap</div><div class="btn gh sm">Move day</div><div class="btn gh sm">Skip</div></div>
+    <p class="note">Moves stay inside the ±1 day tolerance. You can pin any change so the next re-plan keeps it.</p>
+    <div class="sh"><span class="cap">History</span><a>All</a></div>
+    <div class="mr"><span class="d mono">AUG 06</span>Mopped<span class="w2"><span class="dot" style="background:var(--dave)"></span></span></div>
+    <div class="mr"><span class="d mono">JUL 31</span>Mopped<span class="w2"><span class="dot" style="background:var(--carol)"></span></span></div>
+  </div>
+  <div class="tabs"><span class="on">Today</span><span>Calendar</span><span>Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="swap"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Today</span><span class="act">Edit chore</span></div>
+  <div class="hd"><span class="cap">Wed 12 Aug · due today</span><h3 style="margin-top:4px;">Mop</h3><p>Rides on every 2nd Vacuum, within ±1 day.</p></div>
+  <div class="dim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <span class="cap">Swap Mop · Wed 12</span>
+    <h4>Who should take it?</h4>
+    <div class="li dis"><span class="radio"></span><span class="dot" style="background:var(--alice)"></span><div>Alice<span class="s">currently assigned</span></div></div>
+    <div class="li"><span class="radio on"></span><span class="dot" style="background:var(--carol)"></span><div>Carol<span class="s">rest ok · 12 → 13 tasks</span></div><span class="r"><span class="tag ok">best</span></span></div>
+    <div class="li"><span class="radio"></span><span class="dot" style="background:var(--dave)"></span><div>Dave<span class="s">already worked today</span></div><span class="r"><span class="tag warn">short rest</span></span></div>
+    <div class="li dis"><span class="radio"></span><span class="dot" style="background:var(--bob)"></span><div>Bob<span class="s">never assigned Mop</span></div></div>
+    <div class="fr" style="padding:12px 0 4px;"><div>Pin for future re-plans<div class="note" style="margin:2px 0 0;">The solver keeps this as a fixed assignment.</div></div><span class="tg on"></span></div>
+    <div class="btn" style="margin-top:12px;">Swap with Carol</div>
+    <div class="btn txt">Cancel</div>
+  </div>
+</div></template>
+
+<template id="week"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="mono" style="font-size:0.7rem;color:var(--tx2);">‹ WK 33 ›</span><span class="act">Today</span></div>
+  <div class="hd"><h3>Aug 10 – 16</h3></div>
+  <div class="bd">
+    <div class="seg" style="margin-top:10px;"><span class="on">Grid</span><span>List</span><span>Fridge</span><span>Only me</span></div>
+    <div class="gr">
+      <div class="lb"></div>
+      <div class="h">M<b>10</b></div><div class="h">T<b>11</b></div><div class="h tc">W<b>12</b></div><div class="h">T<b>13</b></div><div class="h">F<b>14</b></div><div class="h">S<b>15</b></div><div class="h">S<b>16</b></div>
+      <div class="lb">Dishes</div>
+      <div><span class="dot" style="background:var(--carol)"></span></div><div><span class="dot" style="background:var(--alice)"></span></div><div class="tc"><span class="dot" style="background:var(--dave)"></span></div><div><span class="dot" style="background:var(--bob)"></span></div><div><span class="dot" style="background:var(--alice)"></span></div><div><span class="dot" style="background:var(--carol)"></span></div><div><span class="dot" style="background:var(--alice)"></span></div>
+      <div class="lb">Trash</div>
+      <div></div><div></div><div class="tc"><span class="dot" style="background:var(--carol)"></span></div><div></div><div></div><div></div><div></div>
+      <div class="lb">Vacuum</div>
+      <div></div><div></div><div class="tc"><span class="dot" style="background:var(--alice)"></span></div><div></div><div></div><div><span class="dot" style="background:var(--dave)"></span></div><div></div>
+      <div class="lb">Mop</div>
+      <div></div><div></div><div class="tc"><span class="dot" style="background:var(--alice)"></span></div><div></div><div></div><div></div><div></div>
+    </div>
+    <div class="legend-mini"><span><i class="dot" style="background:var(--alice)"></i>Alice</span><span><i class="dot" style="background:var(--bob)"></i>Bob</span><span><i class="dot" style="background:var(--carol)"></i>Carol</span><span><i class="dot" style="background:var(--dave)"></i>Dave</span></div>
+    <div class="sh"><span class="cap">Wed 12 · selected</span><a>Open day</a></div>
+    <div class="mr"><span class="d mono">DISHES</span>Dave<span class="w2"><span class="dot" style="background:var(--dave)"></span></span></div>
+    <div class="mr"><span class="d mono">TRASH</span>Carol<span class="w2"><span class="dot" style="background:var(--carol)"></span></span></div>
+    <div class="mr"><span class="d mono">VAC+MOP</span>Alice<span class="w2"><span class="dot" style="background:var(--alice)"></span></span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span class="on">Calendar</span><span>Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="day"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Week</span><span class="act">+ One-off task</span></div>
+  <div class="hd"><span class="cap">Sat 15 Aug</span><h3 style="margin-top:4px;">Saturday</h3><p>2 tasks · Bob is off</p></div>
+  <div class="bd">
+    <div class="li" style="margin-top:6px;border-top:1px solid var(--line);"><span class="ck"></span>Dishes<span class="r gt"><span class="dot" style="background:var(--carol)"></span>Carol</span></div>
+    <div class="li end"><span class="ck"></span>Vacuum<span class="r gt"><span class="dot" style="background:var(--dave)"></span>Dave</span></div>
+    <div class="sh"><span class="cap">Who's around</span></div>
+    <div class="li"><span class="dot" style="background:var(--alice)"></span>Alice<span class="r">resting · worked Fri</span></div>
+    <div class="li"><span class="dot" style="background:var(--bob)"></span>Bob<span class="r">day off</span></div>
+    <div class="li"><span class="dot" style="background:var(--carol)"></span>Carol<span class="r">on Dishes</span></div>
+    <div class="li end"><span class="dot" style="background:var(--dave)"></span>Dave<span class="r">on Vacuum</span></div>
+    <p class="note">Resting means inside the 2-day house buffer after a task.</p>
+    <div class="btn gh sm" style="margin-top:12px;">Mark me off this day</div>
+  </div>
+  <div class="tabs"><span>Today</span><span class="on">Calendar</span><span>Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="house"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="cap">August plan</span><span class="act">Edit</span></div>
+  <div class="hd"><h3>Household</h3><p>47 tasks · spread of 1 task</p></div>
+  <div class="bd">
+    <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;gap:2px;margin-top:12px;">
+      <i style="flex:12;background:var(--alice)"></i><i style="flex:12;background:var(--bob)"></i><i style="flex:12;background:var(--carol)"></i><i style="flex:11;background:var(--dave)"></i>
+    </div>
+    <div class="sh"><span class="cap">People</span><a>+ Add</a></div>
+    <div class="li"><span class="dot" style="background:var(--alice)"></span><div>Alice<span class="s">No days off</span></div><span class="r mono gt">12</span></div>
+    <div class="li"><span class="dot" style="background:var(--bob)"></span><div>Bob<span class="s">Off Sat &amp; Sun · never Mop</span></div><span class="r mono gt">12</span></div>
+    <div class="li"><span class="dot" style="background:var(--carol)"></span><div>Carol<span class="s">Off Friday</span></div><span class="r mono gt">12</span></div>
+    <div class="li end"><span class="dot" style="background:var(--dave)"></span><div>Dave · you <span class="tag inv">admin</span><span class="s">No days off</span></div><span class="r mono gt">11</span></div>
+    <div class="sh"><span class="cap">Fairness</span></div>
+    <div class="li"><span>Workload spread</span><span class="r mono gt">1 task</span></div>
+    <div class="li end"><span>Rest balance</span><span class="r mono gt">0.4 d</span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span>Calendar</span><span class="on">Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="person"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Household</span><span class="act">Edit</span></div>
+  <div class="hd"><h3 style="display:flex;align-items:center;gap:8px;"><span class="dot" style="background:var(--bob);width:10px;height:10px;"></span>Bob</h3><p>Off Sat &amp; Sun · never assigned Mop</p></div>
+  <div class="bd">
+    <div class="stats"><div><b>12</b><span class="cap">tasks</span></div><div><b>3.3d</b><span class="cap">avg rest</span></div><div><b>0</b><span class="cap">short rests</span></div></div>
+    <div class="sh"><span class="cap">Share of each chore</span><span class="cap">| = avg</span></div>
+    <div class="sr"><span>Dishes</span><div class="bar"><i style="width:100%;background:var(--bob)"></i><u style="left:87%"></u></div><span class="v">8</span></div>
+    <div class="sr"><span>Vacuum</span><div class="bar"><i style="width:37%;background:var(--bob)"></i><u style="left:31%"></u></div><span class="v">3</span></div>
+    <div class="sr"><span>Trash</span><div class="bar"><i style="width:12%;background:var(--bob)"></i><u style="left:12%"></u></div><span class="v">1</span></div>
+    <div class="sr ex"><span>Mop</span><div class="bar"></div><span class="v">—</span></div>
+    <p class="note" style="margin-top:4px;">One extra Dishes evens Bob's total. His Mop zero isn't counted as unfair.</p>
+    <div class="sh"><span class="cap">Up next</span></div>
+    <div class="mr"><span class="d mono">THU 13</span>Dishes<span class="w2 mono" style="font-size:0.6rem;color:var(--tx3);">TOMORROW</span></div>
+    <div class="mr"><span class="d mono">MON 17</span>Dishes<span class="w2 mono" style="font-size:0.6rem;color:var(--tx3);">IN 5 DAYS</span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span>Calendar</span><span class="on">Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="editperson"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Cancel</span><span class="act">Save</span></div>
+  <div class="hd"><h3>Edit Bob</h3></div>
+  <div class="bd">
+    <div class="fld"><span class="cap">Name</span><div class="v">Bob</div></div>
+    <div class="fld"><span class="cap">Colour</span>
+      <div class="swatches"><i style="background:var(--alice)"></i><i class="sel" style="background:var(--bob)"></i><i style="background:var(--carol)"></i><i style="background:var(--dave)"></i><i style="background:#7c3aed"></i><i style="background:#0891b2"></i></div></div>
+    <div class="fld"><span class="cap">Off every week</span>
+      <div class="wk"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span class="off">S</span><span class="off">S</span></div></div>
+    <div class="fld"><span class="cap">Off on dates</span>
+      <div class="pills"><span class="pill mono">AUG 22 ×</span><span class="pill dash">+ Add date</span></div></div>
+    <div class="fld" style="border-bottom:0;"><span class="cap">Never assign</span>
+      <div class="pills"><span class="pill">Dishes</span><span class="pill">Trash</span><span class="pill">Vacuum</span><span class="pill on">Mop ✓</span></div>
+      <p class="note ok">Mop still has 3 eligible people, enough for its rest buffer.</p></div>
+  </div>
+  <div class="ft" style="padding-top:0;"><div class="btn danger">Remove from household</div></div>
+</div></template>
+
+<template id="fair"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Household</span><span class="cap">MILP · Aug</span></div>
+  <div class="hd"><h3>Fairness</h3><p>How the schedule was judged, in priority order.</p></div>
+  <div class="bd">
+    <div class="li" style="margin-top:6px;"><span class="mono cap" style="width:12px;">1</span>Rule breaks<span class="r mono">0 <span class="tag ok">ok</span></span></div>
+    <div class="li"><span class="mono cap" style="width:12px;">2</span>Rest exceptions<span class="r mono gt">2</span></div>
+    <div class="li"><span class="mono cap" style="width:12px;">3</span>Workload spread<span class="r mono">1 task</span></div>
+    <div class="li"><span class="mono cap" style="width:12px;">4</span>Rest balance<span class="r mono">0.4 d</span></div>
+    <div class="li end"><span class="mono cap" style="width:12px;">5</span>Per-chore spread<span class="r mono">2</span></div>
+    <div class="mtx">
+      <div class="l"></div><div class="h"><i class="dot" style="background:var(--alice)"></i>A</div><div class="h"><i class="dot" style="background:var(--bob)"></i>B</div><div class="h"><i class="dot" style="background:var(--carol)"></i>C</div><div class="h"><i class="dot" style="background:var(--dave)"></i>D</div>
+      <div class="l">Dishes</div><div>7</div><div>8</div><div>7</div><div>6</div>
+      <div class="l">Vacuum</div><div>2</div><div>3</div><div>2</div><div>3</div>
+      <div class="l">Mop</div><div>2</div><div class="z">—</div><div>2</div><div>1</div>
+      <div class="l">Trash</div><div>1</div><div>1</div><div>1</div><div>1</div>
+    </div>
+    <div class="sh" style="margin-bottom:8px;"><span class="cap">When these conflict, prefer</span></div>
+    <div class="seg"><span class="on">Equal totals</span><span>Equal per chore</span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span>Calendar</span><span class="on">Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="setup"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="cap">config</span><span class="act">+ Add</span></div>
+  <div class="hd"><h3>Setup</h3><p>Everything the solver uses. Changes apply on the next re-plan.</p></div>
+  <div class="bd">
+    <div class="sh"><span class="cap">Chores</span></div>
+    <div class="li"><span>Dishes</span><span class="r mono gt">1d</span></div>
+    <div class="li"><span>Trash</span><span class="r mono gt">7d ±1</span></div>
+    <div class="li"><span>Vacuum</span><span class="r mono gt">3d ±1</span></div>
+    <div class="li end"><span>Mop</span><span class="r mono gt">2nd vacuum</span></div>
+    <div class="sh"><span class="cap">House rules</span></div>
+    <div class="li"><span>Rest buffer</span><span class="r mono gt">2 days</span></div>
+    <div class="li"><span>Planning window</span><span class="r mono gt">4 weeks</span></div>
+    <div class="li end"><span>Roommate order</span><span class="r mono gt">seed 42</span></div>
+    <div class="sh"><span class="cap">Schedule</span></div>
+    <div class="li end"><span>Health &amp; re-plan</span><span class="r gt"><span class="tag warn">3 exc</span></span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span>Calendar</span><span>Team</span><span class="on">Setup</span></div>
+</div></template>
+
+<template id="editchore"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Cancel</span><span class="act">Save</span></div>
+  <div class="hd"><h3>Vacuum</h3></div>
+  <div class="bd">
+    <div class="fld"><span class="cap">Tasks in this group</span><div class="pills"><span class="pill">Vacuum ×</span><span class="pill dash">+ Add task</span></div></div>
+    <div class="fld"><span class="cap">Repeats</span><div class="seg" style="margin-top:8px;"><span class="on">Every N days</span><span>Piggyback</span></div></div>
+    <div class="fld fr"><span>Every</span><span class="stp"><span>−</span><b>3</b><span>+</span></span></div>
+    <div class="fld fr"><span>Tolerance</span><span class="stp"><span>−</span><b>±1</b><span>+</span></span></div>
+    <div class="fld fr"><span>Own rest buffer</span><span class="r gt">House · 2d</span></div>
+    <div class="fld" style="border-bottom:0;"><span class="cap">Who can do it</span>
+      <div class="pills"><span class="pill on"><i class="dot" style="background:var(--alice)"></i>Alice</span><span class="pill on"><i class="dot" style="background:var(--bob)"></i>Bob</span><span class="pill on"><i class="dot" style="background:var(--carol)"></i>Carol</span><span class="pill on"><i class="dot" style="background:var(--dave)"></i>Dave</span></div></div>
+  </div>
+  <div class="ft" style="padding-top:0;"><div class="btn danger">Delete chore</div></div>
+</div></template>
+
+<template id="addchore"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Cancel</span><span class="act">Add</span></div>
+  <div class="hd"><h3>New chore</h3></div>
+  <div class="bd">
+    <div class="fld"><span class="cap">Name</span><div class="v ph">e.g. Mop</div></div>
+    <div class="fld"><span class="cap">Repeats</span><div class="seg" style="margin-top:8px;"><span>Every N days</span><span class="on">Piggyback</span></div></div>
+    <div class="fld fr"><span>Rides on</span><span class="r">Vacuum ▾</span></div>
+    <div class="fld fr"><span>Every nth time</span><span class="stp"><span>−</span><b>2</b><span>+</span></span></div>
+    <div class="fld fr"><span>Tolerance</span><span class="stp"><span>−</span><b>±1</b><span>+</span></span></div>
+    <div class="fld" style="border-bottom:0;"><span class="cap">Who can do it</span>
+      <div class="pills"><span class="pill on"><i class="dot" style="background:var(--alice)"></i>Alice</span><span class="pill off"><i class="dot" style="background:var(--bob)"></i>Bob</span><span class="pill on"><i class="dot" style="background:var(--carol)"></i>Carol</span><span class="pill on"><i class="dot" style="background:var(--dave)"></i>Dave</span></div>
+      <p class="note">Happens on every 2nd Vacuum, within ±1 day of it.</p></div>
+  </div>
+  <div class="ft"><div class="btn">Add chore</div></div>
+</div></template>
+
+<template id="editrule"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Setup</span><span class="act">Per-chore</span></div>
+  <div class="hd"><h3>Rest buffer</h3><p>Days off after <em>any</em> task, for everyone. Chores can override it.</p></div>
+  <div class="bd">
+    <div class="bigstep"><span>−</span><div><b>2</b><small>days</small></div><span>+</span></div>
+    <div class="sh"><span class="cap">Impact on August</span><span class="cap">live preview</span></div>
+    <div class="imp"><span class="mono">1 day</span><div class="bar"><i style="width:4%;background:var(--tx3)"></i></div><span class="v mono">0 exc</span></div>
+    <div class="imp cur"><span class="mono">2 days</span><div class="bar"><i style="width:22%;background:var(--tx)"></i></div><span class="v mono">3 exc</span></div>
+    <div class="imp"><span class="mono">3 days</span><div class="bar"><i style="width:64%;background:var(--tx3)"></i></div><span class="v mono">9 exc</span></div>
+    <div class="imp"><span class="mono">4 days</span><div class="bar"><i style="width:100%;background:var(--tx3)"></i></div><span class="v mono">14 exc</span></div>
+    <p class="note">More rest is nicer, but with 4 people and daily dishes some days won't have anyone fully rested. Those days show up as exceptions.</p>
+  </div>
+  <div class="ft"><div class="btn">Save &amp; re-plan</div></div>
+</div></template>
+
+<template id="health"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Setup</span><span class="cap">MILP · Aug</span></div>
+  <div class="hd"><h3>Schedule health</h3><p>3 exceptions. Proven minimum: no schedule for these rules does better.</p></div>
+  <div class="bd">
+    <div class="sh"><span class="cap">Rest buffer · 2</span></div>
+    <div class="li end" style="padding-bottom:4px;"><span class="dot" style="background:var(--alice)"></span><div>Alice · Fri 14<span class="s">Vac + Mop Wed → Dishes Fri · 1 of 2 rest days</span></div><span class="r mono">⌃</span></div>
+    <div class="why mono"><b>CAROL</b> off Fridays<br><b>BOB</b>&nbsp;&nbsp; did Dishes Thu<br><b>DAVE</b>&nbsp; worked Wed too<br>→ <b>ALICE</b> tie-break: per-chore balance</div>
+    <div class="li"><span class="dot" style="background:var(--alice)"></span><div>Alice · Sun 16<span class="s">Dishes Fri → Dishes Sun · 1 of 2</span></div><span class="r mono">⌄</span></div>
+    <div class="sh"><span class="cap">Cadence · 1</span></div>
+    <div class="li end"><span class="dot" style="background:var(--tx3)"></span><div>Trash · Aug 3<span class="s">5 days after Jul 29 · min 6, from July's carry-over</span></div><span class="r mono">⌄</span></div>
+    <div class="sh"><span class="cap">Checks</span></div>
+    
+    <div class="mr"><span class="mono" style="width:14px;">✓</span>Frequency, days off, exclusions<span class="w2 mono" style="font-size:0.62rem;color:var(--tx3);">all pass</span></div>
+  </div>
+  <div class="ft" style="padding-top:4px;"><div class="row"><div class="btn gh sm">Change rules</div><div class="btn sm">Wrap up month</div></div></div>
+</div></template>
+
+<template id="wrap"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Health</span><span class="cap">Aug 1 – 28</span></div>
+  <div class="hd"><h3>Wrap up August</h3><p>MILP · 47 tasks · 3 exceptions</p></div>
+  <div class="bd">
+    <div class="sh"><span class="cap">Carries into the next plan</span></div>
+    <div class="kv"><span class="k">Rest owed</span><span>Alice, Carol → Aug 30</span></div>
+    <div class="kv"><span class="k">Chore phase</span><span>Vacuum due by Aug 30</span></div>
+    <div class="kv"><span class="k">History</span><span class="mono" style="font-size:0.7rem;">54 · 53 · 53 · 53</span></div>
+    <div class="sh"><span class="cap">Next plan</span></div>
+    <div class="kv"><span class="k">Starts</span><span>Sat, Aug 29</span></div>
+    <div class="kv"><span class="k">Length</span><span class="stp"><span>−</span><b>4w</b><span>+</span></span></div>
+    <div class="seg" style="margin-top:10px;"><span class="on">Keep order · seed 42</span><span>Fresh shuffle</span></div>
+    <div class="sh" style="margin-bottom:8px;"><span class="cap">Export August</span></div>
+    <div class="row"><div class="btn gh sm mono">CSV</div><div class="btn gh sm mono">DOCX</div><div class="btn gh sm mono">PDF</div></div>
+  </div>
+  <div class="ft"><div class="btn">Generate next schedule</div></div>
+</div></template>
+
+<template id="custom"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Back</span><span class="av">D</span></div>
+  <div class="hd"><h3>Customize</h3><p>Make the app yours. Schedule rules live in Setup.</p></div>
+  <div class="bd">
+    <div class="sh" style="margin-bottom:8px;"><span class="cap">Appearance</span></div>
+    <div class="seg"><span class="on">System</span><span>Light</span><span>Dark</span></div>
+    <div class="sh"><span class="cap">Today shows</span><a>Reorder</a></div>
+    <div class="li"><span>My tasks first</span><span class="r"><span class="tg on"></span></span></div>
+    <div class="li"><span>Household tasks</span><span class="r"><span class="tg on"></span></span></div>
+    <div class="li end"><span>Next 4 days</span><span class="r"><span class="tg on"></span></span></div>
+    <div class="sh"><span class="cap">Reminders</span></div>
+    <div class="li"><div>Morning digest<span class="s mono">08:00</span></div><span class="r"><span class="tg on"></span></span></div>
+    <div class="li end"><div>Nudge if still undone<span class="s mono">20:00</span></div><span class="r"><span class="tg"></span></span></div>
+    <div class="sh"><span class="cap">More</span></div>
+    <div class="li end"><span>Week starts on</span><span class="r gt">Monday</span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span>Calendar</span><span>Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="fb-cells">
+  <div class="h"></div><div class="h">MON<b>10</b></div><div class="h">TUE<b>11</b></div><div class="h tc">WED<b>12</b></div><div class="h">THU<b>13</b></div><div class="h">FRI<b>14</b></div><div class="h">SAT<b>15</b></div><div class="h">SUN<b>16</b></div>
+
+  <div class="p"><i class="dot" style="background:var(--alice)"></i>Ali</div>
+  <div></div>
+  <div class="done"><span class="ch"><span class="sk" style="--d:1">Dish</span></span><span class="rn">r2</span></div>
+  <div class="tc"><span class="ch" style="color:var(--tx3)"><span class="sk" style="--d:1">Vac</span></span><span class="ch">Mop</span><span class="rn">r0</span></div>
+  <div></div>
+  <div><span class="ch">Dish</span><span class="rn">r1</span></div>
+  <div></div>
+  <div><span class="ch">Dish</span><span class="rn">r1</span></div>
+
+  <div class="p"><i class="dot" style="background:var(--bob)"></i>Bob</div>
+  <div></div><div></div><div class="tc"></div>
+  <div><span class="ch">Dish</span><span class="rn">r3</span></div>
+  <div></div><div class="off"></div><div class="off"></div>
+
+  <div class="p"><i class="dot" style="background:var(--carol)"></i>Car</div>
+  <div><span class="ch miss"><span class="sk" style="--m:1">Dish</span></span><span class="rn">r2</span></div>
+  <div></div>
+  <div class="tc done"><span class="ch"><span class="sk" style="--d:1">Trash</span></span><span class="rn">r1</span></div>
+  <div></div><div class="off"></div>
+  <div><span class="ch">Dish</span><span class="rn">r2</span></div>
+  <div></div>
+
+  <div class="p"><i class="dot" style="background:var(--dave)"></i>Dav</div>
+  <div></div><div></div>
+  <div class="tc done"><span class="ch"><span class="sk" style="--d:1">Dish</span></span><span class="rn">r3</span></div>
+  <div></div><div></div>
+  <div><span class="ch">Vac</span><span class="rn">r2</span></div>
+  <div></div>
+</template>
+
+<template id="fridge"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Week</span><span class="act">Print PDF</span></div>
+  <div class="hd"><h3>Fridge board</h3><p>Week of Aug 10. Tap a name to strike it through, like a pen on paper.</p></div>
+  <div class="bd" style="padding:4px 12px 10px;">
+    <div class="fb" data-cells></div>
+    <div class="fb-legend"><span><span class="sk" style="--d:1">struck</span> = done</span><span style="color:var(--bad)">red = missed</span><span>r2 = rest days before</span><span>▨ off</span></div>
+    <div class="missed"><span class="mk">✗</span><div>Carol · Mon Dishes</div><span class="r"><span>Make up</span><span>Reassign</span></span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span class="on">Calendar</span><span>Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="fridgemark"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Week</span><span class="act">Print PDF</span></div>
+  <div class="hd"><h3>Fridge board</h3><p>Week of Aug 10. Tap a name to strike it through, like a pen on paper.</p></div>
+  <div class="dim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <span class="cap">Wed 12 · Alice</span>
+    <h4>Mop</h4>
+    <div class="bigopt on"><span class="mk">✓</span><div>Done<span class="s">by Alice, as planned</span></div></div>
+    <div class="bigopt"><span class="mk" style="color:var(--bad)">✗</span><div>Missed<span class="s">nobody did it</span></div></div>
+    <div class="bigopt"><span class="mk">↺</span><div>Someone else did it<span class="s">they get the credit in fairness</span></div></div>
+    <div class="cover"><span class="pill"><i class="dot" style="background:var(--bob)"></i>Bob</span><span class="pill"><i class="dot" style="background:var(--carol)"></i>Carol</span><span class="pill"><i class="dot" style="background:var(--dave)"></i>Dave</span></div>
+    <div class="fr" style="padding:14px 0 4px;"><div>If missed, schedule a make-up<div class="note" style="margin:2px 0 0;">Next re-plan adds it back inside the tolerance.</div></div><span class="tg on"></span></div>
+    <div class="btn" style="margin-top:12px;">Save</div>
+  </div>
+</div></template>
+
+<template id="fridgetab"><div class="tscr">
+  <div class="tmain">
+    <div style="display:flex;align-items:baseline;gap:14px;">
+      <span style="font-size:1.6rem;font-weight:600;letter-spacing:-0.025em;">Week of Aug 10</span>
+      <span class="mono" style="font-size:0.8rem;color:var(--tx3);">‹ ›</span>
+      <span style="margin-left:auto;font-size:0.8rem;font-weight:600;text-decoration:underline;text-underline-offset:3px;">Print PDF</span>
+    </div>
+    <div class="fb" data-cells></div>
+    <div class="fb-legend" style="font-size:0.66rem;margin-top:12px;"><span>tap a name to strike it through · red = missed</span><span>r2 = rest days before</span><span>▨ day off</span></div>
+  </div>
+  <div class="tside">
+    <span class="cap">Today</span>
+    <div style="display:flex;align-items:flex-end;gap:10px;margin:8px 0 14px;"><span class="big" style="font-size:3.6rem;">12</span><span style="font-size:0.8rem;color:var(--tx2);line-height:1.3;padding-bottom:4px;"><b style="display:block;color:var(--tx);">Wednesday</b>3 of 4 done</span></div>
+    <div class="tli"><span class="ck on"></span><span class="x">Dishes</span><span class="r"><i class="dot" style="background:var(--dave)"></i>Dave</span></div>
+    <div class="tli"><span class="ck on"></span><span class="x">Trash</span><span class="r"><i class="dot" style="background:var(--carol)"></i>Carol</span></div>
+    <div class="tli"><span class="ck on"></span><span class="x">Vacuum</span><span class="r"><i class="dot" style="background:var(--alice)"></i>Alice</span></div>
+    <div class="tli" style="border-bottom:0;"><span class="ck"></span><span>Mop</span><span class="r"><i class="dot" style="background:var(--alice)"></i>Alice</span></div>
+    <div class="missed" style="margin-top:14px;font-size:0.76rem;"><span class="mk">✗</span><div>1 missed this week<div class="note" style="margin:1px 0 0;">Carol · Mon Dishes</div></div></div>
+    <div class="cap" style="margin-top:auto;">always on · dims at 23:00</div>
+  </div>
+</div></template>
+
+<template id="w-fridge">
+  <div class="w l" style="padding:14px 12px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="ttl" style="font-size:1rem;">Fridge board</span><span class="cap">Aug 10 – 16</span></div>
+    <div class="fb" data-cells></div>
+    <div class="sub mono" style="margin-top:auto;">TAP TO STRIKE · 1 MISSED</div>
+  </div>
+</template>
+
+
+
+<template id="fb-multi">
+  <div class="h"></div><div class="h">MON<b>10</b></div><div class="h">TUE<b>11</b></div><div class="h tc">WED<b>12</b></div><div class="h">THU<b>13</b></div><div class="h">FRI<b>14</b></div><div class="h">SAT<b>15</b></div><div class="h">SUN<b>16</b></div>
+
+  <div class="p"><i class="dot" style="background:var(--alice)"></i>Ali</div>
+  <div></div>
+  <div class="done"><span class="ch" style="color:var(--tx3)"><span class="sk" style="--n:3;--d:3;--m:0">Dish</span></span><span class="cnt">3/3</span></div>
+  <div class="tc"><span class="ch" style="color:var(--tx3)"><span class="sk" style="--d:1">Vac</span></span><span class="ch">Mop</span></div>
+  <div></div>
+  <div class=""><span class="ch"><span class="sk" style="--n:3;--d:0;--m:0">Dish</span></span><span class="cnt">0/3</span></div>
+  <div></div>
+  <div class=""><span class="ch"><span class="sk" style="--n:3;--d:0;--m:0">Dish</span></span><span class="cnt">0/3</span></div>
+
+  <div class="p"><i class="dot" style="background:var(--bob)"></i>Bob</div>
+  <div></div><div></div><div class="tc"></div>
+  <div class=""><span class="ch"><span class="sk" style="--n:3;--d:0;--m:0">Dish</span></span><span class="cnt">0/3</span></div>
+  <div></div><div class="off"></div><div class="off"></div>
+
+  <div class="p"><i class="dot" style="background:var(--carol)"></i>Car</div>
+  <div class=""><span class="ch"><span class="sk" style="--n:3;--d:2;--m:1">Dish</span></span><span class="cnt">2/3</span></div>
+  <div></div>
+  <div class="tc done"><span class="ch"><span class="sk" style="--d:1">Trash</span></span></div>
+  <div></div><div class="off"></div>
+  <div class=""><span class="ch"><span class="sk" style="--n:3;--d:0;--m:0">Dish</span></span><span class="cnt">0/3</span></div>
+  <div></div>
+
+  <div class="p"><i class="dot" style="background:var(--dave)"></i>Dav</div>
+  <div></div><div></div>
+  <div class="tc"><span class="ch"><span class="sk" style="--n:3;--d:2;--m:0">Dish</span></span><span class="cnt">2/3</span></div>
+  <div></div><div></div>
+  <div><span class="ch">Vac</span></div>
+  <div></div>
+</template>
+
+<template id="fridge3"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Week</span><span class="act">Print PDF</span></div>
+  <div class="hd"><h3>Fridge board</h3><p>Dishes: 3 times a day, one person all day.</p></div>
+  <div class="bd" style="padding:4px 12px 10px;">
+    <div class="fb" data-cells="fb-multi"></div>
+    <div class="fb-legend"><span><span class="sk" style="--n:3;--d:2">segment</span> = one session</span><span style="color:var(--bad)">red = missed</span><span>2/3 = done so far</span></div>
+    <div class="missed"><span class="mk">✗</span><div>Carol · Mon dinner dishes</div><span class="r"><span>Make up</span></span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span class="on">Calendar</span><span>Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="sessions"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Week</span><span class="act">Print PDF</span></div>
+  <div class="hd"><h3>Fridge board</h3><p>Dishes: 3 times a day, one person all day.</p></div>
+  <div class="dim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <span class="cap">Wed 12 · Dave</span>
+    <h4 style="display:flex;align-items:baseline;gap:8px;"><span class="sk" style="--n:3;--d:2">Dishes</span><span class="mono" style="font-size:0.7rem;color:var(--tx3);font-weight:400;">2/3</span></h4>
+    <div class="sess"><span class="when">08:10</span><span class="full"><span class="sk" style="--d:1">Breakfast</span></span><span class="r">you</span></div>
+    <div class="sess"><span class="when">13:05</span><span class="full"><span class="sk" style="--d:1">Lunch</span></span><span class="r"><span class="dot" style="background:var(--carol)"></span>covered by Carol</span></div>
+    <div class="sess"><span class="when">by 22:00</span><span>Dinner</span><span class="r"><span class="btn sm" style="padding:6px 12px;">Strike</span></span></div>
+    <div class="pills" style="margin:6px 0 0 55px;"><span class="pill dash">Someone else did it</span><span class="pill dash">Not needed today</span></div>
+    <div class="fr" style="padding:14px 0 2px;"><div>Remind me for dinner<div class="note" style="margin:2px 0 0;">20:00 if still open</div></div><span class="tg on"></span></div>
+    <p class="note">Lunch credit goes to Carol (⅓ of today's dishes). Long-press a struck session to undo.</p>
+    <div class="btn" style="margin-top:12px;">Done</div>
+  </div>
+</div></template>
+
+<template id="editsessions"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Cancel</span><span class="act">Save</span></div>
+  <div class="hd"><h3>Dishes</h3></div>
+  <div class="bd">
+    <div class="fld"><span class="cap">Repeats</span><div class="seg" style="margin-top:8px;"><span class="on">Every N days</span><span>Piggyback</span></div></div>
+    <div class="fld fr"><span>Every</span><span class="stp"><span>−</span><b>1</b><span>+</span></span></div>
+    <div class="fld fr"><span>Times per day</span><span class="stp"><span>−</span><b>3</b><span>+</span></span></div>
+    <div class="fld"><span class="cap">Sessions</span><div class="pills"><span class="pill">Breakfast</span><span class="pill">Lunch</span><span class="pill">Dinner</span><span class="pill dash">+</span></div></div>
+    <div class="fld" style="border-bottom:0;"><span class="cap">Who does them</span>
+      <div class="seg" style="margin-top:8px;"><span class="on">One person all day</span><span>Split between people</span></div>
+      <p class="note"><b>One person:</b> one assignment, struck 3 times. Uses today's solver as is.<br><b>Split:</b> each session is its own slot. Nobody gets two on the same day, so it needs more people and adds rest exceptions.</p></div>
+  </div>
+  <div class="ft" style="padding-top:0;"><div class="btn danger">Delete chore</div></div>
+</div></template>
+
+<template id="st-anatomy">
+  <div class="anat">
+    <div class="ar"><span class="smp">Dishes</span><span class="lb2"><b>To do</b>Not struck yet</span></div>
+    <div class="ar"><span class="smp full"><span class="sk" style="--d:1">Dishes</span></span><span class="lb2"><b>Done</b>One line through it</span></div>
+    <div class="ar"><span class="smp"><span class="sk" style="--n:3;--d:2">Dishes</span><small>2/3</small></span><span class="lb2"><b>Partly done</b>Breakfast and lunch struck, dinner to go</span></div>
+    <div class="ar"><span class="smp miss"><span class="sk" style="--m:1">Dishes</span></span><span class="lb2"><b>Missed</b>Red line, red text</span></div>
+    <div class="ar"><span class="smp"><span class="sk" style="--n:3;--d:2;--m:1">Dishes</span><small>2/3</small></span><span class="lb2"><b>Day closed, one missed</b>Dinner never happened</span></div>
+    <div class="ar"><span class="smp full"><span class="sk" style="--d:1">Dishes</span> <i class="dot" style="background:var(--carol);vertical-align:2px;"></i></span><span class="lb2"><b>Covered</b>Done by someone else: their dot is added</span></div>
+    <div class="ar"><span class="smp skip">Dishes</span><span class="lb2"><b>Not needed</b>Skipped on purpose, not counted against anyone</span></div>
+    <div class="ar"><span class="smp"><span class="full"><span class="sk" style="--d:1">Sweep</span></span>/Trash</span><span class="lb2"><b>Named steps</b>Strike only the part that's done</span></div>
+    <div class="ar"><span class="smp"><span class="sk" style="--n:4;--d:1">Feed cat</span><small>1/4</small></span><span class="lb2"><b>4× a day</b>Still segments</span></div>
+    <div class="ar"><span class="smp"><span class="sk cont" style="--n:6;--d:4">Water plants</span><small>4/6</small></span><span class="lb2"><b>5× or more</b>One continuous line plus a count; segments would be too small</span></div>
+  </div>
+</template>
+
+
+<template id="fb-draft">
+  <div class="h"></div><div class="h">MON<b>17</b></div><div class="h">TUE<b>18</b></div><div class="h">WED<b>19</b></div><div class="h">THU<b>20</b></div><div class="h tc">FRI<b>21</b></div><div class="h">SAT<b>22</b></div><div class="h">SUN<b>23</b></div>
+
+  <div class="p"><i class="dot" style="background:var(--alice)"></i>Ali</div>
+  <div></div><div><span class="ch">Dish</span></div><div></div><div></div>
+  <div class="tc chg"><span class="ch">Dish</span><span class="was">was Bob</span></div>
+  <div></div><div><span class="ch">Dish</span></div>
+
+  <div class="p"><i class="dot" style="background:var(--bob)"></i>Bob</div>
+  <div><span class="ch">Dish</span></div><div></div><div><span class="ch">Trash</span></div><div></div>
+  <div class="tc chg off"><span class="was">day off</span></div>
+  <div class="off"></div><div class="off"></div>
+
+  <div class="p"><i class="dot" style="background:var(--carol)"></i>Car</div>
+  <div></div><div></div><div><span class="ch">Dish</span></div><div></div>
+  <div class="tc off"></div>
+  <div><span class="ch">Dish</span></div><div></div>
+
+  <div class="p"><i class="dot" style="background:var(--dave)"></i>Dav</div>
+  <div></div><div><span class="ch">Vac</span><span class="ch">Mop</span></div><div></div><div><span class="ch">Dish</span></div>
+  <div class="tc"></div>
+  <div><span class="ch">Vac</span></div><div></div>
+</template>
+
+<template id="p-options"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Requests</span><span class="cap">admin</span></div>
+  <div class="hd"><span class="cap"><span class="dot" style="background:var(--bob);width:6px;height:6px;margin-right:5px;"></span>Bob · day off · Fri 21 Aug</span><h3 style="margin-top:6px;">How should we cover it?</h3><p>Nothing changes for anyone until you publish.</p></div>
+  <div class="bd">
+    <div class="opt on"><span class="radio on"></span><div style="flex:1;"><b>A · Alice takes Fri 21 Dishes</b><span class="s">1 change · rest 2 days ✓ · spread 1 → 2</span><span class="tag inv" style="display:inline-block;margin-top:6px;">fewest changes</span></div></div>
+    <div class="opt"><span class="radio"></span><div style="flex:1;"><b>B · Re-plan from Fri 21</b><span class="s">3 people affected · spread stays 1</span><span class="tag ok" style="display:inline-block;margin-top:6px;">fairest</span></div></div>
+    <div class="opt"><span class="radio"></span><div style="flex:1;"><b>C · Dave takes it</b><span class="s">1 change · worked Thu, short rest</span><span class="tag warn" style="display:inline-block;margin-top:6px;">rest</span></div></div>
+  </div>
+  <div class="ft"><div class="row"><div class="btn gh">Preview on board</div><div class="btn">Approve A</div></div></div>
+</div></template>
+
+<template id="p-draft"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Options</span><span class="act">Changes</span></div>
+  <div class="hd"><h3>Preview</h3></div>
+  <div class="bd" style="padding:4px 12px 10px;">
+    <div class="draftbar"><b>DRAFT</b> only admins can see this<span>Aug 17 – 23</span></div>
+    <div class="seg" style="margin-top:10px;"><span class="on">A · Alice</span><span>B · Re-plan</span><span>C · Dave</span></div>
+    <div class="stat3"><span><b>1</b> change</span><span>spread <b>1 → 2</b></span><span>exc <b>3</b></span></div>
+    <div class="fb" data-cells="fb-draft"></div>
+    <div class="fb-legend"><span>⬚ dashed = changed vs live schedule</span></div>
+  </div>
+  <div class="ft"><div class="row"><div class="btn gh">Discard</div><div class="btn">Approve &amp; publish</div></div></div>
+</div></template>
+
+<template id="p-diff"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Preview</span><span class="cap">option B</span></div>
+  <div class="hd"><h3>What changes</h3><p>Re-plan from Fri 21 · 3 people · spread stays 1</p></div>
+  <div class="bd">
+    <div class="who-h"><i class="dot" style="background:var(--alice)"></i>Alice<span>12 → 12</span></div>
+    <div class="chg-row"><span class="pm">+</span><span class="d">FRI 21</span>Dishes</div>
+    <div class="chg-row out"><span class="pm">−</span><span class="d">SUN 23</span>Dishes → Dave</div>
+    <div class="who-h"><i class="dot" style="background:var(--bob)"></i>Bob<span>12 → 11</span></div>
+    <div class="chg-row out"><span class="pm">−</span><span class="d">FRI 21</span>Dishes · day off</div>
+    <div class="who-h"><i class="dot" style="background:var(--dave)"></i>Dave<span>11 → 12</span></div>
+    <div class="chg-row"><span class="pm">+</span><span class="d">SUN 23</span>Dishes</div>
+    <div class="who-h" style="color:var(--tx3);font-weight:400;"><i class="dot" style="background:var(--carol)"></i>Carol<span>no change</span></div>
+    <div class="fr" style="padding:12px 0 0;border-top:1px solid var(--line);margin-top:10px;"><span>Notify the 3 affected people</span><span class="tg on"></span></div>
+  </div>
+  <div class="ft"><div class="row"><div class="btn gh">Back</div><div class="btn">Publish</div></div></div>
+</div></template>
+
+
+<template id="fb-pick">
+  <div class="h"></div><div class="h">MON<b>10</b></div><div class="h">TUE<b>11</b></div><div class="h">WED<b>12</b></div><div class="h">THU<b>13</b></div><div class="h">FRI<b>14</b></div><div class="h">SAT<b>15</b></div><div class="h">SUN<b>16</b></div>
+  <div class="p"><i class="dot" style="background:var(--alice)"></i>Ali</div>
+  <div></div><div><span class="ch">Dish</span></div><div><span class="ch">Vac</span><span class="ch">Mop</span></div><div></div><div><span class="ch">Dish</span></div><div></div><div><span class="ch">Dish</span></div>
+  <div class="p"><i class="dot" style="background:var(--bob)"></i>Bob</div>
+  <div></div><div></div><div></div><div><span class="ch">Dish</span></div><div></div><div class="off"></div><div class="off"></div>
+  <div class="p"><i class="dot" style="background:var(--carol)"></i>Car</div>
+  <div><span class="ch">Dish</span></div><div></div><div><span class="ch">Trash</span></div><div></div><div class="off"></div><div><span class="ch">Dish</span></div><div></div>
+  <div class="p"><i class="dot" style="background:var(--dave)"></i>Dav</div>
+  <div></div><div></div><div><span class="ch">Dish</span></div><div></div><div></div><div><span class="ch">Vac</span></div><div></div>
+</template>
+
+<template id="pickprev"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Pick</span><span class="mono" style="font-size:0.68rem;color:var(--tx2);">‹ WEEK 2 / 4 ›</span></div>
+  <div class="hd"><h3>Preview</h3></div>
+  <div class="bd" style="padding:4px 12px 10px;">
+    <div class="draftbar"><b>PREVIEW</b> nothing is saved yet<span>Aug 10 – 16</span></div>
+    <div class="segx"><span class="on">MILP</span><span>Hungarian</span><span>Tabu</span><span>SA</span><span>GA</span><span>Greedy</span></div>
+    <div class="stat3"><span>exc <b>3</b></span><span>spread <b>1</b></span><span>rest bal <b>0.4d</b></span></div>
+    <div class="fb" data-cells="fb-pick"></div>
+    <div class="totals"><span><i class="dot" style="background:var(--alice)"></i>12</span><span><i class="dot" style="background:var(--bob)"></i>12</span><span><i class="dot" style="background:var(--carol)"></i>12</span><span><i class="dot" style="background:var(--dave)"></i>11</span><span>month totals</span></div>
+  </div>
+  <div class="ft"><div class="row"><div class="btn gh">Compare</div><div class="btn">Use MILP</div></div></div>
+</div></template>
+
+<template id="s-fork"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span></span><span class="act">Sign in</span></div>
+  <div class="hd" style="margin-top:30px;"><span class="cap">Welcome</span><h3 style="margin-top:6px;">Who's this for?</h3><p>You can switch later. Your history comes with you.</p></div>
+  <div class="bd">
+    <div class="choice on"><div class="ico"><i></i></div><b>Just me</b><p>Spread my chores evenly across the week so no day gets heavy.</p></div>
+    <div class="choice"><div class="ico"><i></i><i class="o"></i><i class="o"></i></div><b>A household</b><p>Share chores fairly between roommates, with rest days between turns.</p></div>
+    <div class="choice"><div class="ico"><i class="o"></i></div><b>Join a household</b><p>I have a code from a roommate.</p></div>
+  </div>
+  <div class="ft"><div class="btn">Continue</div></div>
+</div></template>
+
+<template id="s-setup"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Back</span><span class="cap">Just me</span></div>
+  <div class="hd"><h3>Your chores</h3><p>Rough minutes are enough. They balance the week.</p></div>
+  <div class="bd">
+    <div class="li" style="margin-top:4px;"><div>Dishes<span class="s mono">every day</span></div><span class="r min">15 min</span></div>
+    <div class="li"><div>Vacuum<span class="s mono">every 3d ±1</span></div><span class="r min">20 min</span></div>
+    <div class="li"><div>Laundry<span class="s mono">weekly</span></div><span class="r min">40 min</span></div>
+    <div class="li"><div>Bathroom<span class="s mono">weekly ±1</span></div><span class="r min">30 min</span></div>
+    <div class="li end"><div>Plants<span class="s mono">every 3d</span></div><span class="r min">5 min</span></div>
+    <div class="kv" style="margin-top:6px;border-top:1px solid var(--line);"><span class="k">Max per day</span><span class="stp"><span>−</span><b>60m</b><span>+</span></span></div>
+    <div class="fld" style="border-bottom:0;padding-top:8px;"><span class="cap">Busy days · max 15 min</span>
+      <div class="wk"><span>M</span><span class="off">T</span><span>W</span><span class="off">T</span><span>F</span><span>S</span><span>S</span></div></div>
+  </div>
+  <div class="ft"><div class="btn">Build my week</div></div>
+</div></template>
+
+<template id="s-today"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="cap">Today</span><span class="av">D</span></div>
+  <div class="dt"><div class="big">12</div><div class="dside"><b>Wednesday</b>August</div><div class="dct mono">15/35<span>min</span></div></div>
+  <div style="padding:0 20px;flex:none;"><div class="line"><i style="width:43%"></i></div></div>
+  <div class="bd">
+    <div class="sh"><span class="cap">Today</span><a>Edit</a></div>
+    <div class="li"><span class="ck on"></span><span class="x">Dishes</span><span class="r min">15m</span></div>
+    <div class="li end"><span class="ck"></span><div>Vacuum<span class="s">pulled in a day: Thu is busy</span></div><span class="r min">20m</span></div>
+    <div class="sh"><span class="cap">Next 4 days</span><a>Week</a></div>
+    <div class="mr"><span class="d mono">THU 13</span>Dishes<span class="w2 min">busy · 15m</span></div>
+    <div class="mr"><span class="d mono">FRI 14</span>Dishes, Plants, Bathroom<span class="w2 min">50m</span></div>
+    <div class="mr"><span class="d mono">SAT 15</span>Dishes, Laundry<span class="w2 min">55m</span></div>
+    <div class="mr"><span class="d mono">SUN 16</span>Dishes, Vacuum<span class="w2 min">35m</span></div>
+  </div>
+  <div class="tabs"><span class="on">Today</span><span>Week</span><span>Setup</span></div>
+</div></template>
+
+<template id="s-week"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="mono" style="font-size:0.7rem;color:var(--tx2);">‹ WK 33 ›</span><span class="act">Re-plan</span></div>
+  <div class="hd"><h3>Aug 10 – 16</h3><p>245 min · normal days 35–55 min, spread 20</p></div>
+  <div class="bd">
+    <div class="seg" style="margin-top:10px;"><span class="on">Load</span><span>Board</span><span>List</span></div>
+    <div class="load">
+      <div class="cap-line" style="bottom:75%;"><span>60m cap</span></div>
+      <div class="col"><i style="height:18.75%"></i><i class="b" style="height:25%"></i><i class="c" style="height:6.25%"></i></div>
+      <div class="col busy"><i style="height:18.75%"></i></div>
+      <div class="col"><i style="height:18.75%"></i><i class="b" style="height:25%"></i></div>
+      <div class="col busy"><i style="height:18.75%"></i></div>
+      <div class="col"><i style="height:18.75%"></i><i class="b" style="height:37.5%"></i><i class="c" style="height:6.25%"></i></div>
+      <div class="col"><i style="height:18.75%"></i><i class="b" style="height:50%"></i></div>
+      <div class="col"><i style="height:18.75%"></i><i class="b" style="height:25%"></i></div>
+    </div>
+    <div class="load-x"><div>M<b>10</b>40</div><div>T<b>11</b>15</div><div class="tc">W<b>12</b>35</div><div>T<b>13</b>15</div><div>F<b>14</b>50</div><div>S<b>15</b>55</div><div>S<b>16</b>35</div></div>
+    <div class="legend-mini" style="margin-top:12px;"><span><i class="dot" style="background:var(--tx)"></i>daily</span><span><i class="dot" style="background:color-mix(in srgb, var(--tx) 55%, transparent)"></i>vacuum · bath · laundry</span><span><i class="dot" style="background:color-mix(in srgb, var(--tx) 25%, transparent)"></i>plants</span><span>▨ busy day</span></div>
+    <p class="note">Busy days only get Dishes. Plants slid Thu → Fri and Vacuum Thu → Wed, both inside their tolerance. Tap a bar to move something.</p>
+  </div>
+  <div class="tabs"><span>Today</span><span class="on">Week</span><span>Setup</span></div>
+</div></template>
+
+<template id="fb-solo">
+  <div class="h"></div><div class="h">MON<b>10</b></div><div class="h">TUE<b>11</b></div><div class="h tc">WED<b>12</b></div><div class="h">THU<b>13</b></div><div class="h">FRI<b>14</b></div><div class="h">SAT<b>15</b></div><div class="h">SUN<b>16</b></div>
+  <div class="p">Dishes</div>
+  <div class="done"><span class="ch"><span class="sk" style="--d:1">15m</span></span></div><div class="done"><span class="ch"><span class="sk" style="--d:1">15m</span></span></div><div class="tc done"><span class="ch"><span class="sk" style="--d:1">15m</span></span></div><div><span class="ch">15m</span></div><div><span class="ch">15m</span></div><div><span class="ch">15m</span></div><div><span class="ch">15m</span></div>
+  <div class="p">Vacuum</div>
+  <div class="done"><span class="ch"><span class="sk" style="--d:1">20m</span></span></div><div class="off"></div><div class="tc"><span class="ch">20m</span></div><div class="off"></div><div></div><div></div><div><span class="ch">20m</span></div>
+  <div class="p">Laundry</div>
+  <div></div><div class="off"></div><div class="tc"></div><div class="off"></div><div></div><div><span class="ch">40m</span></div><div></div>
+  <div class="p">Bath</div>
+  <div></div><div class="off"></div><div class="tc"></div><div class="off"></div><div><span class="ch">30m</span></div><div></div><div></div>
+  <div class="p">Plants</div>
+  <div class="done"><span class="ch"><span class="sk" style="--d:1">5m</span></span></div><div class="off"></div><div class="tc"></div><div class="off"></div><div><span class="ch">5m</span></div><div></div><div></div>
+</template>
+
+<template id="s-board"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Week</span><span class="act">Print PDF</span></div>
+  <div class="hd"><h3>My board</h3><p>Week of Aug 10. Strike it when it's done.</p></div>
+  <div class="bd" style="padding:4px 12px 10px;">
+    <div class="fb solo" data-cells="fb-solo"></div>
+    <div class="fb-legend"><span><span class="sk" style="--d:1">struck</span> = done</span><span>▨ busy day (Tue, Thu)</span></div>
+    <div class="missed" style="border-style:dashed;"><span class="mono">↻</span><div>Plants moved Thu → Fri<div class="note" style="margin:1px 0 0;">Thu is a busy day (15 min cap)</div></div><span class="r"><span>Undo</span></span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span class="on">Week</span><span>Setup</span></div>
+</div></template>
+
+<!-- ======================= WIDGET TEMPLATES ======================= -->
+
+<template id="w-small1">
+  <div class="w s">
+    <span class="dot pin" style="background:var(--dave)"></span>
+    <span class="cap">Next for you</span>
+    <div style="margin-top:auto;"><div class="ttl">Vacuum</div><div class="sub mono">SAT 15 · IN 3 DAYS</div></div>
+  </div>
+  <div class="w s">
+    <span class="cap">Today · house</span>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:auto;">
+      <div class="ring"><i>3/4</i></div>
+      <div style="font-size:0.72rem;line-height:1.35;">Mop left<div class="sub" style="display:flex;align-items:center;gap:4px;"><span class="dot" style="background:var(--alice);width:6px;height:6px;"></span>Alice</div></div>
+    </div>
+  </div>
+  <div class="w s">
+    <span class="cap">You're done today</span>
+    <div style="margin-top:auto;display:flex;align-items:baseline;gap:6px;"><span class="big" style="font-size:3rem;">3</span><span style="font-size:0.72rem;color:var(--tx2);">days off</span></div>
+    <div class="sub">until Vacuum on Sat</div>
+  </div>
+</template>
+
+<template id="w-small2">
+  <div class="w s">
+    <span class="dot pin" style="background:var(--dave)"></span>
+    <span class="cap">Today · you</span>
+    <div class="ttl" style="margin-top:8px;">Dishes</div>
+    <div class="sub mono">DAILY · BEFORE 22:00</div>
+    <div class="wbtn">✓ Mark done</div>
+  </div>
+  <div class="w s">
+    <span class="cap">August · tasks</span>
+    <div class="ttl" style="margin-top:6px;font-size:1rem;">Even <span class="sub mono" style="font-weight:400;">spread 1</span></div>
+    <div class="vb">
+      <div>12<i style="height:30px;background:var(--alice)"></i></div>
+      <div>12<i style="height:30px;background:var(--bob)"></i></div>
+      <div>12<i style="height:30px;background:var(--carol)"></i></div>
+      <div>11<i style="height:27px;background:var(--dave)"></i></div>
+    </div>
+  </div>
+</template>
+
+<template id="w-medium">
+  <div class="w m" style="flex-direction:row;gap:14px;">
+    <div style="width:74px;display:flex;flex-direction:column;border-right:1px solid var(--line);padding-right:12px;">
+      <span class="cap">Wed</span><span class="big" style="font-size:2.8rem;margin-top:6px;">12</span>
+      <span class="sub mono" style="margin-top:auto;">3/4 DONE</span>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+      <div class="wrow"><span class="ck on"></span><span class="x">Dishes</span><span class="r dot" style="background:var(--dave)"></span></div>
+      <div class="wrow"><span class="ck on"></span><span class="x">Trash</span><span class="r dot" style="background:var(--carol)"></span></div>
+      <div class="wrow"><span class="ck on"></span><span class="x">Vacuum</span><span class="r dot" style="background:var(--alice)"></span></div>
+      <div class="wrow"><span class="ck"></span><span>Mop</span><span class="r dot" style="background:var(--alice)"></span></div>
+    </div>
+  </div>
+  <div class="w m">
+    <div style="display:flex;justify-content:space-between;"><span class="cap">Aug 10 – 16</span><span class="cap">you: wed · sat</span></div>
+    <div class="wk7">
+      <div><span class="d">M</span><span class="n">10</span><span class="ds"><i style="background:var(--carol)"></i></span></div>
+      <div><span class="d">T</span><span class="n">11</span><span class="ds"><i style="background:var(--alice)"></i></span></div>
+      <div class="tc"><span class="d">W</span><span class="n">12</span><span class="ds"><i style="background:var(--dave)"></i><i style="background:var(--carol)"></i><i style="background:var(--alice)"></i></span></div>
+      <div><span class="d">T</span><span class="n">13</span><span class="ds"><i style="background:var(--bob)"></i></span></div>
+      <div><span class="d">F</span><span class="n">14</span><span class="ds"><i style="background:var(--alice)"></i></span></div>
+      <div><span class="d">S</span><span class="n">15</span><span class="ds"><i style="background:var(--carol)"></i><i style="background:var(--dave)"></i></span></div>
+      <div><span class="d">S</span><span class="n">16</span><span class="ds"><i style="background:var(--alice)"></i></span></div>
+    </div>
+  </div>
+</template>
+
+<template id="w-medium2">
+  <div class="w m">
+    <div style="display:flex;justify-content:space-between;margin-bottom:auto;"><span class="cap">Workload · August</span><span class="cap">spread 1</span></div>
+    <div class="hb"><span style="display:flex;align-items:center;gap:6px;"><i class="dot" style="background:var(--alice)"></i>Alice</span><div class="bar"><i style="width:100%;background:var(--alice)"></i></div><span>12</span></div>
+    <div class="hb"><span style="display:flex;align-items:center;gap:6px;"><i class="dot" style="background:var(--bob)"></i>Bob</span><div class="bar"><i style="width:100%;background:var(--bob)"></i></div><span>12</span></div>
+    <div class="hb"><span style="display:flex;align-items:center;gap:6px;"><i class="dot" style="background:var(--carol)"></i>Carol</span><div class="bar"><i style="width:100%;background:var(--carol)"></i></div><span>12</span></div>
+    <div class="hb"><span style="display:flex;align-items:center;gap:6px;"><i class="dot" style="background:var(--dave)"></i>Dave</span><div class="bar"><i style="width:92%;background:var(--dave)"></i></div><span>11</span></div>
+  </div>
+  <div class="w strip">
+    <span class="mono" style="font-size:0.66rem;color:var(--tx3);">WED 12</span>
+    <span style="width:1px;height:26px;background:var(--line);"></span>
+    <span class="x" style="font-size:0.74rem;display:flex;align-items:center;gap:5px;"><i class="dot" style="background:var(--dave)"></i>Dishes</span>
+    <span class="x" style="font-size:0.74rem;display:flex;align-items:center;gap:5px;"><i class="dot" style="background:var(--carol)"></i>Trash</span>
+    <span class="x" style="font-size:0.74rem;display:flex;align-items:center;gap:5px;"><i class="dot" style="background:var(--alice)"></i>Vac</span>
+    <span style="font-size:0.74rem;font-weight:600;display:flex;align-items:center;gap:5px;margin-left:auto;"><i class="dot" style="background:var(--alice)"></i>Mop</span>
+  </div>
+</template>
+
+<template id="w-large">
+  <div class="w l" style="padding:16px 16px 12px 30px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span class="ttl" style="font-size:1rem;">This week</span><span class="cap">Aug 10 – 16</span></div>
+    <div class="ag past"><span class="d">MON 10</span><span class="ts"><span><i class="dot" style="background:var(--carol)"></i>Dishes</span></span></div>
+    <div class="ag past"><span class="d">TUE 11</span><span class="ts"><span><i class="dot" style="background:var(--alice)"></i>Dishes</span></span></div>
+    <div class="ag tc"><span class="d">WED 12</span><span class="ts"><span><i class="dot" style="background:var(--dave)"></i>Dishes</span><span><i class="dot" style="background:var(--carol)"></i>Trash</span><span><i class="dot" style="background:var(--alice)"></i>Vacuum</span><span><i class="dot" style="background:var(--alice)"></i>Mop</span></span></div>
+    <div class="ag"><span class="d">THU 13</span><span class="ts"><span><i class="dot" style="background:var(--bob)"></i>Dishes</span></span></div>
+    <div class="ag"><span class="d">FRI 14</span><span class="ts"><span><i class="dot" style="background:var(--alice)"></i>Dishes</span></span></div>
+    <div class="ag"><span class="d">SAT 15</span><span class="ts"><span><i class="dot" style="background:var(--carol)"></i>Dishes</span><span><i class="dot" style="background:var(--dave)"></i>Vacuum</span></span></div>
+    <div class="ag"><span class="d">SUN 16</span><span class="ts"><span><i class="dot" style="background:var(--alice)"></i>Dishes</span></span></div>
+    <div class="sub mono" style="margin-top:auto;">YOU · WED, SAT</div>
+  </div>
+</template>
+
+<template id="w-lock">
+  <div class="lockscr">
+    <div class="lk-date">Wednesday, Aug 12 <span>· Mop left, Alice</span></div>
+    <div class="lk-time">9:41</div>
+    <div class="lk-row">
+      <div class="lk c ringed"><div><b>3/4</b><span>today</span></div></div>
+      <div class="lk c"><b>3d</b><span>till yours</span></div>
+      <div class="lk r" style="width:136px;"><span class="cap">Next · you</span><b>Vacuum</b><small>Sat 15</small></div>
+    </div>
+    <div class="lk-row">
+      <div class="lk r" style="width:282px;flex-direction:row;align-items:center;gap:12px;">
+        <div style="flex:1;"><span class="cap">Today · house</span><b style="display:block;">Mop is left</b><small>Alice · rides on Vacuum</small></div>
+        <span class="mono" style="font-size:1.1rem;font-weight:500;">3/4</span>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="w-edit">
+  <div class="ewall">
+    <div class="esheet">
+      <span class="cap">Edit widget · Today list</span>
+      <div class="fr"><span>Show</span><div class="seg"><span class="on">Me</span><span>Whole house</span></div></div>
+      <div class="fr"><span>Range</span><div class="seg"><span>Today</span><span class="on">3 days</span><span>Week</span></div></div>
+      <div class="fr"><span>Tap opens</span><div class="seg"><span>Task</span><span class="on">Mark done</span></div></div>
+      <div class="fr"><span>Person dots</span><span class="tg on"></span></div>
+    </div>
+  </div>
+</template>
+
+
+<!-- ======================= NOTIFICATION TEMPLATES ======================= -->
+
+<template id="n-lock"><div class="scr lockbg">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="lt"><div class="dt2">Wednesday, August 12</div><div class="tm">9:41</div></div>
+  <div class="nt"><div class="nt-h"><span class="ic">C</span>Chores · digest<span class="t">8:00</span></div>
+    <b>Dishes is yours today</b><p>House: Trash · Carol, Vacuum + Mop · Alice</p></div>
+  <div class="nt"><div class="nt-h"><span class="ic">C</span>Chores<span class="t">9:12</span></div>
+    <b>Carol finished Trash ✓</b><p>2 of 4 done in the house</p></div>
+  <div class="stkb"></div><div class="stkb s2"></div>
+  <div class="nt"><div class="nt-h"><span class="ic">C</span>Chores<span class="t">now</span></div>
+    <span class="tag ts">time-sensitive</span>
+    <b>Mop is still open</b><p>Alice · it rides on today's Vacuum. Tolerance ends tomorrow.</p></div>
+</div></template>
+
+<template id="n-expand"><div class="scr lockbg">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="lt"><div class="dt2">Wednesday, August 12</div><div class="tm">9:41</div></div>
+  <div class="blur-dim"></div>
+  <div style="position:relative;margin-top:auto;margin-bottom:60px;">
+    <div class="nt" style="padding:14px;"><div class="nt-h"><span class="ic">C</span>Chores<span class="t">20:00</span></div>
+      <b style="font-size:0.9rem;">Your Dishes are still open</b>
+      <p>Daily · before 22:00. You're the only one fully rested today.</p></div>
+    <div class="nt-acts">
+      <span>Mark done <span class="mono">✓</span></span>
+      <span>Snooze 1 hour <span class="mono">↻</span></span>
+      <span>Ask someone to swap <span class="mono">⇄</span></span>
+      <span class="d">Can't do it today <span class="mono">✗</span></span>
+    </div>
+  </div>
+</div></template>
+
+<template id="n-banner"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="cap">Today</span><span class="av">D</span></div>
+  <div class="dt"><div class="big">12</div><div class="dside"><b>Wednesday</b>August</div><div class="dct mono">3/4<span>done</span></div></div>
+  <div class="bd">
+    <div class="sh"><span class="cap">Yours</span></div>
+    <div class="li"><span class="ck on"></span><span class="x">Dishes</span><span class="r mono">8:12</span></div>
+    <div class="sh"><span class="cap">House</span></div>
+    <div class="li"><span class="ck on"></span><span class="x">Trash</span><span class="r"><span class="dot" style="background:var(--carol)"></span>Carol</span></div>
+    <div class="li end"><span class="ck"></span>Mop<span class="r"><span class="dot" style="background:var(--alice)"></span>Alice</span></div>
+  </div>
+  <div class="tabs"><span class="on">Today</span><span>Calendar</span><span>Team</span><span>Setup</span></div>
+  <div style="position:absolute;left:0;right:0;top:34px;">
+    <div class="nt" style="background:var(--s1);box-shadow:0 10px 28px rgba(0,0,0,0.22);padding:12px;">
+      <div class="nt-h"><span class="ic">C</span>Chores · swap request<span class="t">now</span></div>
+      <b><span class="dot" style="background:var(--carol);margin-right:6px;"></span>Carol wants to swap</b>
+      <p>Her Sat 15 Dishes ↔ your Sun 16 Dishes. Rest stays ok for both of you.</p>
+      <div class="nt-row"><span>Decline</span><span class="p">Accept</span></div>
+    </div>
+  </div>
+</div></template>
+
+<template id="n-live"><div class="scr lockbg">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="di"><span class="ring-s"></span>Mop · Alice<b>3/4</b></div>
+  <div class="lt" style="padding-top:14px;"><div class="dt2">Wednesday, August 12</div><div class="tm">9:41</div></div>
+  <div class="la">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="cap">Today · house</span><span class="mono" style="font-size:1.2rem;">3/4</span></div>
+    <div class="segs"><i style="background:var(--dave)"></i><i style="background:var(--carol)"></i><i style="background:var(--alice)"></i><i class="o" style="background:var(--alice)"></i></div>
+    <div style="display:flex;justify-content:space-between;margin-top:9px;font-size:0.7rem;"><span>Mop · Alice</span><span style="color:var(--tx2);">open until tomorrow</span></div>
+  </div>
+  <div class="cap" style="text-align:center;margin-top:14px;">dynamic island · expanded</div>
+  <div class="di-x">
+    <div class="row2"><span style="display:flex;align-items:center;gap:8px;"><span class="ring-s" style="width:22px;height:22px;"></span><span><b style="display:block;font-size:0.8rem;">Mop is left</b><span style="color:#9a9a9a;">Alice · rides on Vacuum</span></span></span><span class="mono" style="font-size:1rem;">3/4</span></div>
+    <div style="display:flex;gap:6px;margin-top:10px;"><span style="flex:1;text-align:center;background:#222;border-radius:12px;padding:7px;">Remind Alice</span><span style="flex:1;text-align:center;background:#f2f2f2;color:#111;border-radius:12px;padding:7px;font-weight:600;">Open</span></div>
+  </div>
+</div></template>
+
+<template id="n-inapp"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="cap">Today</span><span class="av">D</span></div>
+  <div class="dt"><div class="big">12</div><div class="dside"><b>Wednesday</b>August</div><div class="dct mono">4/4<span>done</span></div></div>
+  <div class="bd">
+    <div class="ibanner"><span class="mono">↻</span><div>Schedule re-planned<div class="note" style="margin:1px 0 0;">2 changes for you this week</div></div><span class="r">Review</span></div>
+    <div class="ibanner soft"><span class="mono">⇄</span><div>Carol accepted your swap</div></div>
+    <div class="sh"><span class="cap">House</span></div>
+    <div class="li"><span class="ck on"></span><span class="x">Trash</span><span class="r"><span class="dot" style="background:var(--carol)"></span>Carol</span></div>
+    <div class="li"><span class="ck on"></span><span class="x">Vacuum</span><span class="r"><span class="dot" style="background:var(--alice)"></span>Alice</span></div>
+    <div class="li end"><span class="ck on"></span><span class="x">Mop</span><span class="r"><span class="dot" style="background:var(--alice)"></span>Alice</span></div>
+  </div>
+  <div class="toast"><span class="mono">✓</span>Mop marked done for Alice<u>Undo</u></div>
+  <div class="tabs"><span class="on">Today</span><span>Calendar</span><span>Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="n-android"><div class="scr lockbg">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div style="padding:8px 20px 4px;display:flex;justify-content:space-between;align-items:baseline;flex:none;"><span style="font-size:1.6rem;font-weight:400;">9:41</span><span style="font-size:0.66rem;color:var(--tx2);">Wed, Aug 12</span></div>
+  <div class="qs"><span class="on">Wi-Fi</span><span>Do not disturb</span></div>
+  <div class="an"><div class="an-h"><span class="ic">C</span>Chores · now<span class="ex">⌄</span></div>
+    <b>Your Dishes are still open</b><p>Daily · before 22:00</p>
+    <div class="an-acts"><span>Mark done</span><span>Snooze</span><span>Swap</span></div></div>
+  <div class="an"><div class="an-h"><span class="ic">C</span>Chores · 2m<span class="ex">⌄</span></div>
+    <b>Carol wants to swap</b><p>Sat 15 Dishes ↔ your Sun 16 Dishes</p>
+    <div class="an-acts"><span>Accept</span><span>Decline</span></div></div>
+  <div class="an"><div class="an-h"><span class="ic">C</span>Chores · 9:12 · 3 updates<span class="ex">⌄</span></div>
+    <b>House progress</b><p>Carol, Alice and you have ticked tasks</p></div>
+  <div style="text-align:center;font-size:0.64rem;color:var(--tx2);margin-top:8px;">Manage · Clear all</div>
+</div></template>
+
+<template id="n-settings"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Customize</span><span class="act">Test</span></div>
+  <div class="hd"><h3>Notifications</h3><p>What reaches you, and how loud.</p></div>
+  <div class="bd">
+    <div class="li" style="margin-top:6px;"><div>Your task today<span class="s mono">digest · 08:00</span></div><span class="r"><span class="tg on"></span></span></div>
+    <div class="li"><div>Nudge if undone<span class="s mono">20:00 · time-sensitive</span></div><span class="r"><span class="tg on"></span></span></div>
+    <div class="li"><div>Swap &amp; day-off requests<span class="s mono">always</span></div><span class="r"><span class="tg on"></span></span></div>
+    <div class="li"><div>Housemates' progress<span class="s mono">grouped · silent</span></div><span class="r"><span class="tg on"></span></span></div>
+    <div class="li"><div>Re-plan ready<span class="s mono">new schedule generated</span></div><span class="r"><span class="tg on"></span></span></div>
+    <div class="li end"><div>Weekly summary<span class="s mono">sun · 19:00</span></div><span class="r"><span class="tg"></span></span></div>
+    <div class="sh" style="margin-bottom:8px;"><span class="cap">Style</span></div>
+    <div class="seg"><span class="on">Banners</span><span>Digest only</span><span>Off</span></div>
+    <div class="kv" style="margin-top:6px;"><span class="k">Quiet hours</span><span class="mono gt" style="font-size:0.7rem;">22:00 – 07:30</span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span>Calendar</span><span>Team</span><span class="on">Setup</span></div>
+</div></template>
+
+<!-- ======================= ROLE TEMPLATES ======================= -->
+
+<template id="r-members"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Team</span><span class="act">+ Invite</span></div>
+  <div class="hd"><h3>Members</h3><p>Who can see and change what.</p></div>
+  <div class="bd">
+    <div class="li" style="margin-top:6px;"><span class="dot" style="background:var(--dave)"></span><div>Dave · you<span class="s">created the household</span></div><span class="r"><span class="tag inv">admin</span></span></div>
+    <div class="li"><span class="dot" style="background:var(--alice)"></span><div>Alice<span class="s">joined Jun 2</span></div><span class="r gt"><span class="tag inv">admin</span></span></div>
+    <div class="li"><span class="dot" style="background:var(--bob)"></span><div>Bob<span class="s">joined Jun 2</span></div><span class="r gt"><span class="tag">member</span></span></div>
+    <div class="li"><span class="dot" style="background:var(--carol)"></span><div>Carol<span class="s">joined Jun 9</span></div><span class="r gt"><span class="tag">member</span></span></div>
+    <div class="li end dis"><span class="dot" style="border:1px dashed var(--tx3);"></span><div>Invite pending<span class="s mono">code K7Q-2XM · 5 days left</span></div><span class="r">Revoke</span></div>
+    <div class="sh"><span class="cap">Devices</span></div>
+    <div class="li end"><span class="mono" style="width:8px;">▭</span><div>Kitchen tablet<span class="s">fridge board only · no login</span></div><span class="r gt"><span class="tag">board</span></span></div>
+    <div class="sh"><span class="cap">Rules for members</span></div>
+    <div class="li end"><span>Permissions</span><span class="r gt">custom</span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span>Calendar</span><span class="on">Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="r-invite"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Members</span><span></span></div>
+  <div class="hd"><h3>Invite someone</h3><p>They enter this code in the app, or open the link.</p></div>
+  <div class="bd">
+    <div class="code"><span>K</span><span>7</span><span>Q</span><i></i><span>2</span><span>X</span><span>M</span></div>
+    <p class="note mono" style="text-align:center;margin:0 0 6px;">chores.app/j/K7Q-2XM</p>
+    <div class="sh" style="margin-bottom:8px;"><span class="cap">Joins as</span></div>
+    <div class="seg"><span class="on">Member</span><span>Admin</span><span>Board device</span></div>
+    <div class="kv" style="margin-top:8px;"><span class="k">Code expires</span><span class="gt">in 7 days</span></div>
+    <div class="kv"><span class="k">Can be used</span><span class="gt">once</span></div>
+    <p class="note">New people join from the <b>next</b> re-plan. The current schedule isn't reshuffled under anyone.</p>
+  </div>
+  <div class="ft"><div class="row"><div class="btn gh">Copy code</div><div class="btn">Share link</div></div></div>
+</div></template>
+
+<template id="r-perms"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="bk">Members</span><span class="cap">admin</span></div>
+  <div class="hd"><h3>What members can do</h3><p>Admins can always do everything.</p></div>
+  <div class="bd">
+    <div class="li" style="margin-top:4px;"><span>Tick their own tasks</span><span class="r"><span class="lk-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>always</span></span></div>
+    <div class="li"><div>Tick anyone's box<span class="s">like the paper on the fridge</span></div><span class="r"><span class="tg on"></span></span></div>
+    <div class="li"><span>Swap a task</span><span class="r gt">Direct</span></div>
+    <div class="li"><span>Add own days off</span><span class="r gt">Needs approval</span></div>
+    <div class="li"><span>See fairness numbers</span><span class="r"><span class="tg on"></span></span></div>
+    <div class="li end"><span>Edit chores &amp; rules</span><span class="r"><span class="lk-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>admins</span></span></div>
+    <div class="sh"><span class="cap">Kitchen board</span></div>
+    <div class="li"><span>Can tick boxes</span><span class="r"><span class="tg on"></span></span></div>
+    <div class="li end"><span>Shows fairness</span><span class="r"><span class="tg"></span></span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span>Calendar</span><span class="on">Team</span><span>Setup</span></div>
+</div></template>
+
+<template id="r-memsetup"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="cap">config · view only</span><span class="av" style="border-color:var(--bob);">B</span></div>
+  <div class="hd"><h3>Setup</h3></div>
+  <div class="bd">
+    <div class="ibanner soft" style="margin-top:10px;"><span class="lk-i" style="color:var(--tx2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></span><div>Admins (Dave, Alice) manage chores and rules.</div><span class="r" style="color:var(--tx);">Request</span></div>
+    <div class="sh"><span class="cap">Chores</span></div>
+    <div class="li"><span>Dishes</span><span class="r mono">1d</span></div>
+    <div class="li"><span>Trash</span><span class="r mono">7d ±1</span></div>
+    <div class="li"><span>Vacuum</span><span class="r mono">3d ±1</span></div>
+    <div class="li end"><span>Mop</span><span class="r mono">2nd vacuum</span></div>
+    <div class="sh"><span class="cap">Yours</span></div>
+    <div class="li"><span>My days off</span><span class="r gt">Sat, Sun</span></div>
+    <div class="li"><span>Never assign me</span><span class="r gt">Mop</span></div>
+    <div class="li end"><span>My notifications</span><span class="r gt">5 on</span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span>Calendar</span><span>Team</span><span class="on">Setup</span></div>
+</div></template>
+
+<template id="r-request"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="cap">config · view only</span><span class="av" style="border-color:var(--bob);">B</span></div>
+  <div class="hd"><h3>Setup</h3></div>
+  <div class="dim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <span class="cap">Request · goes to Dave &amp; Alice</span>
+    <h4>Add a day off</h4>
+    <div class="seg" style="margin:6px 0 4px;"><span class="on">Day off</span><span>Swap</span><span>Rule change</span></div>
+    <div class="fld fr"><span>Date</span><span class="mono" style="font-size:0.74rem;">FRI 21 AUG</span></div>
+    <div class="fld"><span class="cap">Note</span><div class="v ph">Optional, e.g. travelling</div></div>
+    <div class="req" style="margin-top:12px;border-style:dashed;"><span class="cap">If approved</span>
+      <div class="imp2" style="margin:6px 0 0;">FRI 21 DISHES → Alice<br>rest ok · totals 13 / 11 / 12 / 11</div></div>
+    <div class="fr" style="padding:12px 0 2px;"><span>Tell me when it's decided</span><span class="tg on"></span></div>
+    <div class="btn" style="margin-top:12px;">Send request</div>
+  </div>
+</div></template>
+
+<template id="r-approvals"><div class="scr">
+  <div class="sb"><span>9:41</span><i>••• ▮</i></div>
+  <div class="top"><span class="cap">admin</span><span class="act">History</span></div>
+  <div class="hd"><h3>Requests</h3><p>2 waiting · Dave or Alice can decide.</p></div>
+  <div class="bd">
+    <div class="req">
+      <div class="top2"><span class="dot" style="background:var(--bob)"></span>Day off · Fri 21 Aug</div>
+      <div class="s">Bob · "travelling" · 4 min ago</div>
+      <div class="imp2">DISHES FRI 21 → Alice<br>rest ok · spread 1 → 2</div>
+      <div class="row"><div class="btn gh sm">Decline</div><div class="btn sm">Preview &amp; approve</div></div>
+    </div>
+    <div class="req">
+      <div class="top2"><span class="dot" style="background:var(--carol)"></span>Rule · Trash every 5 days</div>
+      <div class="s">Carol · "bin smells by day 6"</div>
+      <div class="imp2">+2 trash tasks in Aug<br>0 new exceptions</div>
+      <div class="row"><div class="btn gh sm">Decline</div><div class="btn sm">Approve &amp; re-plan</div></div>
+    </div>
+    <div class="sh"><span class="cap">Auto-approved today</span></div>
+    <div class="mr"><span class="mono" style="width:14px;">⇄</span>Carol ↔ Dave · Sat/Sun Dishes<span class="w2 mono" style="font-size:0.58rem;color:var(--tx3);">DIRECT</span></div>
+  </div>
+  <div class="tabs"><span>Today</span><span>Calendar</span><span class="on">Team</span><span>Setup</span></div>
+</div></template>
+
+<script>
+  // Fill every [data-cells] grid inside templates with the shared fridge-board cells.
+  (function(){
+    document.querySelectorAll('template').forEach(function(t){
+      t.content.querySelectorAll('[data-cells]').forEach(function(g){
+        var src = document.getElementById(g.getAttribute('data-cells') || 'fb-cells');
+        g.appendChild(src.content.cloneNode(true));
+      });
+    });
+  })();
+</script>
+<script>
+  // Strikethrough lines: one segment per session. Reads --n (sessions), --d (done), --m (missed) from the inline style.
+  (function(){
+    function num(st, k, dflt){ var m = st.match(new RegExp('--' + k + ':\\s*(\\d+)')); return m ? +m[1] : dflt; }
+    function build(root){
+      root.querySelectorAll('.sk').forEach(function(el){
+        var st = el.getAttribute('style') || '', n = num(st,'n',1), d = num(st,'d',0), m = num(st,'m',0);
+        var line = document.createElement('span'); line.className = 'skl';
+        if (el.classList.contains('cont')) {
+          line.classList.add('cont');
+          var f = document.createElement('i'); f.style.width = (d / n * 100) + '%'; line.appendChild(f);
+        } else {
+          for (var k = 0; k < n; k++) { var i = document.createElement('i'); i.className = k < d ? 'd' : (k < d + m ? 'm' : ''); line.appendChild(i); }
+        }
+        el.appendChild(line);
+      });
+    }
+    document.querySelectorAll('template').forEach(function(t){ build(t.content); });
+    build(document.body);
+  })();
+</script>
+<script>
+  // Clone each screen template into a light and a dark phone frame.
+  document.querySelectorAll('[data-dual]').forEach(function(slot){
+    var tpl = document.getElementById(slot.dataset.dual);
+    ['light','dark'].forEach(function(mode){
+      var col = document.createElement('div');
+      var tablet = slot.dataset.frame === 'tablet';
+      var mini = document.createElement('div'); mini.className = tablet ? 'tmini' : 'mini';
+      var phone = document.createElement('div'); phone.className = (tablet ? 'tab' : 'phone') + ' t-' + mode;
+      phone.appendChild(tpl.content.cloneNode(true));
+      mini.appendChild(phone); col.appendChild(mini);
+      var lbl = document.createElement('div'); lbl.className = 'mini-lbl mono'; lbl.textContent = mode;
+      col.appendChild(lbl); slot.appendChild(col);
+    });
+  });
+  // Same for widgets: one wallpaper per mode.
+  document.querySelectorAll('[data-wdual]').forEach(function(slot){
+    var tpl = document.getElementById(slot.dataset.wdual);
+    ['light','dark'].forEach(function(mode){
+      var col = document.createElement('div');
+      var wall = document.createElement('div'); wall.className = 'wall t-' + mode;
+      if (slot.dataset.wdual === 'w-medium' || slot.dataset.wdual === 'w-medium2') wall.classList.add('col');
+      wall.appendChild(tpl.content.cloneNode(true));
+      col.appendChild(wall);
+      var lbl = document.createElement('div'); lbl.className = 'mini-lbl mono'; lbl.textContent = mode;
+      col.appendChild(lbl); slot.appendChild(col);
+    });
+  });
+  // Fit vs actual-size toggle (remembered per viewer when storage is available).
+  (function(){
+    var btns = document.querySelectorAll('[data-zoom]');
+    function set(z){
+      document.body.classList.toggle('zoom', z === 'full');
+      btns.forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.zoom === z)); });
+      try { localStorage.setItem('chores-zoom', z); } catch(e) {}
+    }
+    btns.forEach(function(b){ b.addEventListener('click', function(){ set(b.dataset.zoom); }); });
+    var saved = null; try { saved = localStorage.getItem('chores-zoom'); } catch(e) {}
+    if (saved) set(saved);
+  })();
+</script>
