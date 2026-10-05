@@ -5,8 +5,7 @@
 config.yml
 *.json
 
-# but DO track the example config (shows the schema, contains no real data)
-!config.example.yml
+# (config_example.yml IS tracked - it shows the schema, with no real data)
 
 # --- Python ---
 __pycache__/
@@ -42,3 +41,13 @@ ENV/
 .idea/
 .DS_Store
 Thumbs.db
+# --- app & server: the rules above are for generated CLI output; these
+# folders legitimately track package.json, tsconfig.json, app.json etc. ---
+!app/**/*.json
+!server/**/*.json
+server/data/
+app/node_modules/
+app/.expo/
+app/dist/
+app/ios/
+app/android/
