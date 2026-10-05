@@ -3,6 +3,7 @@
  * which the server verifies (server/social.py) before creating a session.
  */
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { requireOptionalNativeModule } from 'expo';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 
@@ -14,13 +15,25 @@ const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 // Expo Go doesn't contain the Google Sign-In native module - only dev/store builds do
 const inExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-export async function appleAvailable(): Promise<boolean> {
-  if (Platform.OS !== 'ios') return false;
+export type AppleStatus = 'available' | 'not-ios' | 'no-native-module' | 'unavailable' | 'error';
+
+/**
+ * Why the Apple button is or isn't shown. isAvailableAsync() quietly returns
+ * false when the native module is missing (e.g. a client without it), so check
+ * for the module separately to tell the cases apart.
+ */
+export async function appleStatus(): Promise<AppleStatus> {
+  if (Platform.OS !== 'ios') return 'not-ios';
+  if (!requireOptionalNativeModule('ExpoAppleAuthentication')) return 'no-native-module';
   try {
-    return await AppleAuthentication.isAvailableAsync();
+    return (await AppleAuthentication.isAvailableAsync()) ? 'available' : 'unavailable';
   } catch {
-    return false;
+    return 'error';
   }
+}
+
+export async function appleAvailable(): Promise<boolean> {
+  return (await appleStatus()) === 'available';
 }
 
 export function googleConfigured(): boolean {

@@ -5,12 +5,21 @@ import { Pressable, TextInput, View } from 'react-native';
 
 import { api, type User } from '@/data/api';
 import { useAppData } from '@/data/AppData';
-import { appleAvailable, googleConfigured, signInWithApple, signInWithGoogle } from '@/data/social';
+import { appleStatus, googleConfigured, signInWithApple, signInWithGoogle, type AppleStatus } from '@/data/social';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font } from '@/theme/tokens';
 import { Btn, Note, Screen, Seg, T, TopBar } from '@/ui';
 
 type Mode = 'signup' | 'login';
+
+// development-only explanation of a missing Apple button
+const APPLE_REASON: Record<AppleStatus, string> = {
+  'available': '',
+  'not-ios': 'only offered on iPhone and iPad.',
+  'no-native-module': 'this app build has no Apple sign-in module (an Expo Go without it, or a build made before it was added).',
+  'unavailable': 'iOS reports it unavailable on this device (check you are signed in to an Apple ID in Settings).',
+  'error': 'the availability check failed.',
+};
 
 /** Sign in with Apple / Google, or an email account. The session lives in the Keychain. */
 export default function Auth() {
@@ -22,11 +31,12 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState<'email' | 'google' | 'apple' | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [apple, setApple] = useState(false);
+  const [appleState, setAppleState] = useState<AppleStatus | null>(null);
+  const apple = appleState === 'available';
   const [google, setGoogle] = useState(false);
 
   useEffect(() => {
-    appleAvailable().then(setApple);
+    appleStatus().then(setAppleState);
     // the Google button needs both a build with the native module and a server that accepts Google tokens
     if (googleConfigured()) api.providers().then((p) => setGoogle(p.google)).catch(() => {});
   }, []);
@@ -90,6 +100,12 @@ export default function Auth() {
           textContentType={mode === 'signup' ? 'newPassword' : 'password'} onSubmitEditing={ready ? submit : undefined} style={field} />
       </View>
       {err ? <Note tone="bad">{err}</Note> : null}
+      {__DEV__ && appleState && !apple ? (
+        <Note>Sign in with Apple hidden: {APPLE_REASON[appleState]}</Note>
+      ) : null}
+      {__DEV__ && !google ? (
+        <Note>Google hidden: {googleConfigured() ? 'the server has no GOOGLE_CLIENT_IDS yet.' : 'needs a development build (not Expo Go) and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID.'}</Note>
+      ) : null}
       <Pressable onPress={() => setMode(mode === 'signup' ? 'login' : 'signup')} style={{ marginTop: 18 }}>
         <T v="meta">{mode === 'signup' ? 'Already have an account? ' : 'New here? '}<T v="link">{mode === 'signup' ? 'Sign in' : 'Create one'}</T></T>
       </Pressable>
