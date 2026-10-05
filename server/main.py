@@ -44,7 +44,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from . import auth, requests_logic, social
+from . import auth, requests_logic, social, solo
 from .db import DB, dumps, loads, now
 from .solver_service import ALGORITHMS, ConfigError, normalize_config, solve, write_state
 
@@ -83,6 +83,8 @@ class ChoreGroup(BaseModel):
     # app-only: named sessions within a day (e.g. breakfast/lunch/dinner);
     # the solver still sees one task, the app strikes each session
     sessions: Optional[list[str]] = None
+    # solo mode: rough minutes, used to keep any one day from getting heavy
+    minutes: Optional[int] = Field(None, ge=1, le=600)
 
 
 class Household(BaseModel):
@@ -96,12 +98,18 @@ class Household(BaseModel):
     random_seed: int | Literal["auto"] = 42
     start_day: str
     weeks_to_plan: int = Field(4, ge=1, le=12)
+    # solo mode
+    daily_cap_minutes: int = Field(60, ge=5, le=600)
+    busy_days: list[str] = []
+    busy_cap_minutes: int = Field(15, ge=0, le=600)
 
     def solver_config(self):
         """The dict scheduler.load_config expects (app-only fields dropped)."""
-        cfg = self.model_dump(exclude={"mode", "colors"}, exclude_none=True)
+        cfg = self.model_dump(exclude={"mode", "colors", "daily_cap_minutes", "busy_days", "busy_cap_minutes"},
+                              exclude_none=True)
         for g in cfg["chore_groups"]:
             g.pop("sessions", None)
+            g.pop("minutes", None)
         cfg["days_off"] = {p: cfg["days_off"].get(p, []) for p in self.roommates}
         cfg["exclusions"] = {p: cfg["exclusions"].get(p, []) for p in self.roommates}
         return cfg
@@ -241,8 +249,13 @@ def _config(hid):
 
 
 def _validate(h: Household):
+    cfg = h.solver_config()
+    if h.mode == "solo":
+        if len(h.roommates) != 1:
+            raise HTTPException(422, "Solo mode is for exactly one person")
+        cfg["buffer_days"] = 0  # rest between people doesn't apply; the daily cap does that job
     try:
-        return normalize_config(h.solver_config())
+        return normalize_config(cfg)
     except ConfigError as e:
         raise HTTPException(422, str(e))
 
@@ -501,13 +514,15 @@ def start_plan(hid: int, req: PlanRequest = PlanRequest(), ctx=Depends(admin_of)
     _validate(h)
 
     job_id = uuid.uuid4().hex[:12]
+    algorithms = SOLO_ALGORITHMS if h.mode == "solo" else ALGORITHMS
     job = {
         "id": job_id,
         "household_id": hid,
+        "mode": h.mode,
         "status": "running",
         "started_at": datetime.datetime.now().isoformat(timespec="seconds"),
         "progress": {key: {"label": label, "status": "queued", "seconds": None, "note": None}
-                     for key, label in ALGORITHMS},
+                     for key, label in algorithms},
         "error": None,
     }
     with _jobs_lock:
@@ -519,7 +534,10 @@ def start_plan(hid: int, req: PlanRequest = PlanRequest(), ctx=Depends(admin_of)
 
     def run():
         try:
-            job["_result"] = solve(h.solver_config(), state_path=db().state_path(hid), on_progress=on_progress)
+            if h.mode == "solo":
+                job["_result"] = _solve_solo(h, hid, on_progress)
+            else:
+                job["_result"] = solve(h.solver_config(), state_path=db().state_path(hid), on_progress=on_progress)
             job["status"] = "done"
         except Exception as e:  # surfaced to the app's Building screen
             job["status"] = "failed"
@@ -527,6 +545,29 @@ def start_plan(hid: int, req: PlanRequest = PlanRequest(), ctx=Depends(admin_of)
 
     threading.Thread(target=run, daemon=True).start()
     return {"job_id": job_id}
+
+
+SOLO_ALGORITHMS = [("balanced", "Balanced"), ("earliest", "Earliest day")]
+
+
+def _solve_solo(h: Household, hid, on_progress):
+    cfg = h.model_dump()
+    state = None
+    path = db().state_path(hid)
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            state = loads(f.read())
+        if "group_phase" not in (state or {}):
+            state = None  # a household-mode state file; cadence starts fresh
+    for key, _ in SOLO_ALGORITHMS:
+        on_progress(key, "running", None, None)
+    t0 = datetime.datetime.now()
+    result = solo.plan(cfg, state=state)
+    seconds = (datetime.datetime.now() - t0).total_seconds()
+    found = {c["key"] for c in result["candidates"]}
+    for key, _ in SOLO_ALGORITHMS:
+        on_progress(key, "done" if key in found else "failed", seconds, None)
+    return result
 
 
 def _job(hid, job_id):
@@ -551,7 +592,11 @@ def publish(hid: int, job_id: str, req: PublishRequest, ctx=Depends(admin_of)):
     if not chosen:
         raise HTTPException(404, f"No candidate '{req.algorithm}' in this plan")
 
-    write_state(result, chosen["key"], db().state_path(hid))
+    if job.get("mode") == "solo":
+        with open(db().state_path(hid), "w", encoding="utf-8") as f:
+            f.write(dumps(solo.state_after(chosen)))
+    else:
+        write_state(result, chosen["key"], db().state_path(hid))
     schedule = {
         "published_at": datetime.datetime.now().isoformat(timespec="seconds"),
         "start_day": result["start_day"],
