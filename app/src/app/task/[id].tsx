@@ -81,8 +81,10 @@ export default function TaskSheet() {
         <>
           <Option mark="—" title="Done" sub={`by ${slot.person}, as planned`} on={status?.state === 'done'} onPress={() => save({ state: 'done' })} />
           <Option mark="✗" tone={c.bad} title="Missed" sub="nobody did it" on={status?.state === 'missed'} onPress={() => save({ state: 'missed' })} />
-          <Option mark="↺" title="Someone else did it" sub="they get the credit in fairness" on={status?.state === 'covered'}
-            onPress={() => others[0] && save({ state: 'covered', covered_by: status?.covered_by ?? others[0] })} />
+          {others.length ? (
+            <Option mark="↺" title="Someone else did it" sub="they get the credit in fairness" on={status?.state === 'covered'}
+              onPress={() => save({ state: 'covered', covered_by: status?.covered_by ?? others[0] })} />
+          ) : null}
           {status?.state === 'covered' ? (
             <Pills>
               {others.map((p) => (

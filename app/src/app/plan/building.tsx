@@ -13,6 +13,7 @@ export default function Building() {
   const { c } = useTheme();
   const { job: jobId } = useLocalSearchParams<{ job: string }>();
   const { job, error } = usePlan(jobId);
+  const solo = job?.mode === 'solo';
 
   useEffect(() => {
     if (job?.status === 'done') router.replace({ pathname: '/plan/pick', params: { job: job.id } });
@@ -24,7 +25,9 @@ export default function Building() {
   return (
     <Screen footer={job?.status === 'failed' || error ? <Btn title="Back" kind="ghost" onPress={() => router.back()} /> : undefined}>
       <TopBar left={<T v="cap">{finished}/{rows.length || 6} algorithms</T>} action="Cancel" onAction={() => router.back()} />
-      <Header title="Building your schedule" sub="Six algorithms solve the same rules, then a rest polish. You'll pick the result." />
+      <Header title={solo ? 'Balancing your week' : 'Building your schedule'}
+        sub={solo ? 'Fitting each chore into its window while keeping every day under your cap.'
+          : 'Six algorithms solve the same rules, then a rest polish. You’ll pick the result.'} />
       <View style={{ marginTop: 10 }}>
         {rows.map(([key, p], i) => (
           <Row key={key} end={i === rows.length - 1}

@@ -11,6 +11,7 @@ chore through when it's done, like the paper on the fridge, only shared.
 - **Fits real life:** days off, chores someone never does, chores that go together (mop every second vacuum)
 - **Shared:** invite roommates with a code; admins set the rules, everyone ticks off
 - **Life happens:** ask for a day off or swap a chore; the app shows who'd cover before anyone approves
+- **Just me, too:** living alone? Solo mode spreads your chores so no day gets heavy
 - **Fridge board:** a person-by-day grid you strike through, right on your phone
 
 <table>
@@ -31,6 +32,18 @@ chore through when it's done, like the paper on the fridge, only shared.
   </tr>
   <tr>
     <td align="center">Pick a plan</td><td align="center">Invite with a code</td><td align="center">Dark mode</td><td align="center">Dark mode</td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/12-requests-day-off.png" width="200" alt="Approve a day off with a preview of who covers"></td>
+    <td><img src="docs/screenshots/15-solo-today.png" width="200" alt="Solo mode: Today in minutes"></td>
+    <td><img src="docs/screenshots/16-solo-board.png" width="200" alt="Solo board: chores by day"></td>
+    <td><img src="docs/screenshots/17-solo-load.png" width="200" alt="Solo load: minutes per day against the cap"></td>
+  </tr>
+  <tr>
+    <td align="center">Approve a day off</td><td align="center">Solo: Today</td><td align="center">Solo: board</td><td align="center">Solo: load</td>
   </tr>
 </table>
 
@@ -113,7 +126,8 @@ cd app && npx tsc --noEmit && npx expo lint                           # app type
 | 2b | Sign in with Apple and Google | done; Google turns on once a Google Cloud client is set up |
 | 2c | Requests (day off, swap) with admin preview and approval | done |
 | 2d | Push notifications, hosted server | next (needs the Apple membership and a host) |
-| 3 | Solo mode (balance load across days), chores done several times a day, customisation | planned |
+| 3a | Solo mode: one person, minutes balanced across days under a daily cap, lighter busy days | done |
+| 3b | Customisation (what Today shows, reminders), polish for chores done several times a day | next |
 | 4 | Home and lock-screen widgets, Live Activities, kitchen-tablet fridge board, App Store release | planned |
 
 ## Privacy

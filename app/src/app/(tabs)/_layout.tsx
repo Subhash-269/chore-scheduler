@@ -3,6 +3,7 @@ import type { BottomTabBarProps } from 'expo-router/tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAppData } from '@/data/AppData';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font } from '@/theme/tokens';
 import { tap } from '@/ui';
@@ -10,10 +11,14 @@ import { tap } from '@/ui';
 /** Text-only tabs, the active one underlined - straight from the mono mockups. */
 function TextTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { c } = useTheme();
+  const { household } = useAppData();
   const insets = useSafeAreaInsets();
+  // solo has nobody to share with, so no Team tab
+  const hidden = household?.mode === 'solo' ? new Set(['team']) : new Set<string>();
   return (
     <View style={[styles.bar, { borderTopColor: c.line, backgroundColor: c.bg, paddingBottom: Math.max(insets.bottom, 12) }]}>
       {state.routes.map((route, i) => {
+        if (hidden.has(route.name)) return null;
         const on = state.index === i;
         const label = descriptors[route.key].options.title ?? route.name;
         return (

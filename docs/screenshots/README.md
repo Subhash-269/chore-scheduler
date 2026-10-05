@@ -18,6 +18,11 @@ Bob is off on weekends and Carol on Fridays. No real names or data.
 | `10-task-sheet.png` | Task sheet: done, missed, covered, not needed |
 | `11-setup.png` | Setup |
 | `12-requests-day-off.png` | Requests: approve a day off, previewing who covers |
+| `13-solo-chores.png` | Solo onboarding: chores with rough minutes |
+| `14-solo-preview.png` | Solo: preview the balanced week |
+| `15-solo-today.png` | Solo: Today in minutes |
+| `16-solo-board.png` | Solo board: chores by day |
+| `17-solo-load.png` | Solo load: minutes per day against the cap |
 
 ## Refreshing them
 

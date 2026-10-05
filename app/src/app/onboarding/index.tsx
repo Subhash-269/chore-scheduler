@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { api, setHouseholdId } from '@/data/api';
 import { useAppData } from '@/data/AppData';
-import { emptyHousehold } from '@/data/presets';
+import { emptyHousehold, emptySoloHousehold } from '@/data/presets';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font } from '@/theme/tokens';
 import { Btn, Header, Note, Screen, T, Tag, tap, TopBar } from '@/ui';
@@ -14,7 +14,7 @@ type Choice = 'household' | 'join' | 'solo';
 const CHOICES: { key: Choice; title: string; body: string; soon?: string }[] = [
   { key: 'household', title: 'Start a household', body: 'Set up chores and roommates, then invite everyone with a code.' },
   { key: 'join', title: 'Join a household', body: 'I have a code from a roommate.' },
-  { key: 'solo', title: 'Just me', body: 'Spread my chores evenly across the week so no day gets heavy.', soon: 'phase 3' },
+  { key: 'solo', title: 'Just me', body: 'Spread my chores evenly across the week so no day gets heavy.' },
 ];
 
 /** Who's this for? - the one fork in onboarding. */
@@ -31,12 +31,14 @@ export default function Fork() {
     setBusy(true);
     setErr(null);
     try {
-      const h = await api.createHousehold(name.trim() || 'Home');
+      const solo = choice === 'solo';
+      const h = await api.createHousehold(solo ? 'Just me' : name.trim() || 'Home');
       await setHouseholdId(h.id);
       await refresh();
-      setDraft({ ...emptyHousehold(), roommates: user ? [user.name] : [] });
-      if (user) await setMe(user.name);
-      router.push('/onboarding/roommates');
+      const me = user?.name ?? 'Me';
+      setDraft(solo ? emptySoloHousehold(me) : { ...emptyHousehold(), roommates: user ? [user.name] : [] });
+      await setMe(me);
+      router.push(solo ? '/onboarding/chores' : '/onboarding/roommates');
     } catch (e) {
       setErr((e as Error).message);
     } finally {

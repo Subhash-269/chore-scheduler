@@ -10,6 +10,7 @@ export default function Setup() {
   const { household, schedule, warnings, isAdmin } = useAppData();
   if (!household) return <Loading />;
   const end = schedule ? addDays(schedule.start_day, schedule.days - 1) : null;
+  const solo = household.mode === 'solo';
 
   return (
     <Screen>
@@ -21,7 +22,7 @@ export default function Setup() {
 
       <Section title="Chores" />
       {household.chore_groups.map((g, i) => (
-        <Row key={g.name} end={i === household.chore_groups.length - 1} right={ruleLabel(g)}
+        <Row key={g.name} end={i === household.chore_groups.length - 1} right={solo ? `${ruleLabel(g)} · ${g.minutes ?? 15}m` : ruleLabel(g)}
           sub={g.tasks.length > 1 ? g.tasks.join(' · ') : g.sessions?.length ? `${g.sessions.length}× a day` : undefined}
           disabled={!isAdmin} chevron={isAdmin}
           onPress={() => router.push({ pathname: '/chore/[name]', params: { name: g.name } })}>
@@ -29,10 +30,21 @@ export default function Setup() {
         </Row>
       ))}
 
-      <Section title="House rules" />
-      <Row chevron={isAdmin} disabled={!isAdmin} right={`${household.buffer_days} day${household.buffer_days === 1 ? '' : 's'}`} onPress={() => router.push('/rules')}>Rest buffer</Row>
-      <Row chevron={isAdmin} disabled={!isAdmin} right={`${household.weeks_to_plan} weeks`} onPress={() => router.push('/rules')}>Planning window</Row>
-      <Row chevron={isAdmin} disabled={!isAdmin} end right={household.random_seed === 'auto' ? 'fresh each run' : `seed ${household.random_seed}`} onPress={() => router.push('/rules')}>Roommate order</Row>
+      <Section title={solo ? 'Your week' : 'House rules'} />
+      {solo ? (
+        <>
+          <Row chevron right={`${household.daily_cap_minutes ?? 60} min`} onPress={() => router.push('/rules')}>Most per day</Row>
+          <Row chevron right={(household.busy_days ?? []).length ? `${(household.busy_days ?? []).map((d) => d.slice(0, 3)).join(', ')} · ${household.busy_cap_minutes ?? 15}m` : 'none'}
+            onPress={() => router.push('/rules')}>Busy days</Row>
+          <Row chevron end right={`${household.weeks_to_plan} weeks`} onPress={() => router.push('/rules')}>Planning window</Row>
+        </>
+      ) : (
+        <>
+          <Row chevron={isAdmin} disabled={!isAdmin} right={`${household.buffer_days} day${household.buffer_days === 1 ? '' : 's'}`} onPress={() => router.push('/rules')}>Rest buffer</Row>
+          <Row chevron={isAdmin} disabled={!isAdmin} right={`${household.weeks_to_plan} weeks`} onPress={() => router.push('/rules')}>Planning window</Row>
+          <Row chevron={isAdmin} disabled={!isAdmin} end right={household.random_seed === 'auto' ? 'fresh each run' : `seed ${household.random_seed}`} onPress={() => router.push('/rules')}>Roommate order</Row>
+        </>
+      )}
 
       <Section title="Schedule" />
       {schedule && end ? (

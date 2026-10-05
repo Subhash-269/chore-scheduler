@@ -9,8 +9,9 @@ import type { Slot } from '@/data/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Dot, Loading, Note, Row, Screen, Seg, Strike, T, TopBar } from '@/ui';
 import { FridgeGrid } from '@/ui/FridgeGrid';
+import { LoadBars, SoloGrid } from '@/ui/SoloBoard';
 
-type Mode = 'board' | 'list' | 'me';
+type Mode = 'board' | 'load' | 'list' | 'me';
 
 export default function Calendar() {
   const { c, personColor } = useTheme();
@@ -21,6 +22,7 @@ export default function Calendar() {
   if (!household || !schedule) return <Loading />;
 
   const dates = weekDates(start);
+  const solo = household.mode === 'solo';
   const open = (s: Slot) => router.push({ pathname: '/task/[id]', params: { id: s.id } });
   const strike = (s: Slot) => (sessionCount(household, s.group) > 1 ? open(s) : cycleStatus(s).catch(() => {}));
   const color = (p: string) => personColor(p, household.roommates, household.colors);
@@ -41,13 +43,25 @@ export default function Calendar() {
           onAction={() => setStart(weekStart(today))} />
         <T v="h1">{rangeLabel(dates[0], dates[6])}</T>
         <Seg style={{ marginTop: 12, marginBottom: 12 }} value={mode} onChange={setMode}
-          options={[{ value: 'board', label: 'Fridge board' }, { value: 'list', label: 'List' }, ...(me ? [{ value: 'me' as const, label: 'Only me' }] : [])]} />
+          options={solo
+            ? [{ value: 'board', label: 'Board' }, { value: 'load', label: 'Load' }, { value: 'list', label: 'List' }]
+            : [{ value: 'board', label: 'Fridge board' }, { value: 'list', label: 'List' }, ...(me ? [{ value: 'me' as const, label: 'Only me' }] : [])]} />
       </View>
 
-      {mode === 'board' ? (
+      {mode === 'load' ? (
+        <View style={{ paddingHorizontal: 20 }}>
+          <LoadBars household={household} dates={dates} slots={schedule.slots} today={today} />
+          <Note>Minutes per day. Shaded days are busy or off; red means over the cap.</Note>
+        </View>
+      ) : mode === 'board' ? (
         <View style={{ paddingHorizontal: 10 }}>
-          <FridgeGrid household={household} dates={dates} slots={schedule.slots} statuses={statuses} today={today}
-            showRest onPress={strike} onLongPress={open} />
+          {solo ? (
+            <SoloGrid household={household} dates={dates} slots={schedule.slots} statuses={statuses} today={today}
+              onPress={strike} onLongPress={open} />
+          ) : (
+            <FridgeGrid household={household} dates={dates} slots={schedule.slots} statuses={statuses} today={today}
+              showRest onPress={strike} onLongPress={open} />
+          )}
           <Note style={{ paddingHorizontal: 10 }}>Tap a name to strike it through, tap again for missed, again to clear. Long-press for more.</Note>
         </View>
       ) : (

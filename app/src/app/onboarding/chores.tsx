@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
 import { useAppData } from '@/data/AppData';
-import { CHORE_PRESETS, ruleLabel } from '@/data/presets';
+import { CHORE_PRESETS, ruleLabel, SOLO_PRESETS } from '@/data/presets';
 import type { ChoreGroup } from '@/data/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font } from '@/theme/tokens';
-import { Btn, Header, Loading, Note, Row, Screen, T, Toggle, TopBar } from '@/ui';
+import { Btn, Header, Loading, Note, Row, Screen, Stepper, T, Toggle, TopBar } from '@/ui';
 import { StepBar } from '@/ui/Onboarding';
 
 export default function Chores() {
@@ -16,9 +16,12 @@ export default function Chores() {
   const [custom, setCustom] = useState('');
   if (!draft) return <Loading />;
 
+  const solo = draft.mode === 'solo';
+  const presets = solo ? SOLO_PRESETS : CHORE_PRESETS;
   const groups = draft.chore_groups;
   const has = (name: string) => groups.some((g) => g.name === name);
-  const extras = groups.filter((g) => !CHORE_PRESETS.some((p) => p.name === g.name));
+  const current = (name: string) => groups.find((g) => g.name === name);
+  const extras = groups.filter((g) => !presets.some((p) => p.name === g.name));
 
   const toggle = (g: ChoreGroup, on: boolean) => setDraft((d) => {
     if (!d) return d;
@@ -28,34 +31,48 @@ export default function Chores() {
     return { ...d, chore_groups: next };
   });
 
+  const setMinutes = (name: string, minutes: number) => setDraft((d) => d && {
+    ...d, chore_groups: d.chore_groups.map((x) => (x.name === name ? { ...x, minutes } : x)),
+  });
+
   const addCustom = () => {
     const name = custom.trim();
     if (!name || has(name)) return;
-    setDraft((d) => d && { ...d, chore_groups: [...d.chore_groups, { name, tasks: [name], frequency_days: 7, tolerance_days: 1 }] });
+    setDraft((d) => d && { ...d, chore_groups: [...d.chore_groups,
+      { name, tasks: [name], frequency_days: 7, tolerance_days: 1, ...(d.mode === 'solo' ? { minutes: 15 } : {}) }] });
     setCustom('');
   };
 
+  // solo: minutes stepper on the right; household: the frequency label
+  const right = (g: ChoreGroup) => (solo && has(g.name)
+    ? <Stepper value={current(g.name)?.minutes ?? 15} min={5} max={180} format={(v) => `${v}m`}
+        onChange={(v) => setMinutes(g.name, Math.round(v / 5) * 5 || 5)} />
+    : ruleLabel(g));
+
   return (
-    <Screen footer={<Btn title="Next: availability" disabled={!groups.length} onPress={() => router.push('/onboarding/availability')} />}>
+    <Screen footer={<Btn title={solo ? 'Next: your week' : 'Next: availability'} disabled={!groups.length}
+      onPress={() => router.push(solo ? '/onboarding/solo-week' : '/onboarding/availability')} />}>
       <TopBar back="Back" />
-      <T v="cap">Step 2 / 3</T>
-      <StepBar step={2} />
+      <T v="cap">{solo ? 'Step 1 / 2' : 'Step 2 / 3'}</T>
+      <StepBar step={solo ? 1 : 2} of={solo ? 2 : 3} />
       <View style={{ height: 18 }} />
-      <Header title="What needs doing?" sub="Start from common chores. Fine-tune frequency and who can do what in Setup later." />
+      <Header title={solo ? 'Your chores' : 'What needs doing?'}
+        sub={solo ? 'Rough minutes are enough. They balance the week so no day gets heavy.'
+          : 'Start from common chores. Fine-tune frequency and who can do what in Setup later.'} />
       <View style={{ marginTop: 6 }}>
-        {CHORE_PRESETS.map(({ on: _on, hint, ...g }) => {
+        {presets.map(({ on: _on, hint, ...g }) => {
           const hostMissing = !!g.piggyback_on && !has(g.piggyback_on);
           return (
             <Row key={g.name} disabled={hostMissing}
               left={<Toggle on={has(g.name)} disabled={hostMissing} onChange={(v) => toggle(g, v)} />}
               sub={hostMissing ? `needs ${g.piggyback_on}` : hint}
-              right={ruleLabel(g)}>
+              right={right(g)}>
               {g.tasks[0]}
             </Row>
           );
         })}
         {extras.map((g) => (
-          <Row key={g.name} left={<Toggle on onChange={() => toggle(g, false)} />} sub="custom · weekly, ±1 day" right={ruleLabel(g)}>
+          <Row key={g.name} left={<Toggle on onChange={() => toggle(g, false)} />} sub="custom · weekly, ±1 day" right={right(g)}>
             {g.name}
           </Row>
         ))}
@@ -67,7 +84,7 @@ export default function Chores() {
           {custom.trim() ? <Pressable onPress={addCustom} hitSlop={10}><T v="link">Add</T></Pressable> : null}
         </View>
       </View>
-      <Note>Mop rides along on every 2nd Vacuum day, like your config.yml does.</Note>
+      <Note>{solo ? 'Frequency and tolerance can be changed per chore in Setup.' : 'Mop rides along on every 2nd Vacuum day, like your config.yml does.'}</Note>
     </Screen>
   );
 }

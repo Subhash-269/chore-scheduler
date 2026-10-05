@@ -9,6 +9,7 @@ import { isFinished, strikeCounts } from '@/data/derive';
 import type { Slot } from '@/data/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font } from '@/theme/tokens';
+import { minutesOf } from '@/ui/SoloBoard';
 import { Check, Dot, Loading, Note, ProgressLine, Row, Section, Strike, T, Tag, TopBar } from '@/ui';
 
 export default function Today() {
@@ -20,10 +21,15 @@ export default function Today() {
   if (!household || !schedule) return <Loading />;
   const today = todayIso();
   const todays = schedule.slots.filter((s) => s.date === today);
-  const mine = todays.filter((s) => s.person === me);
-  const house = todays.filter((s) => s.person !== me);
+  // solo: one list - every task is yours
+  const mine = household.mode === 'solo' ? [] : todays.filter((s) => s.person === me);
+  const house = household.mode === 'solo' ? todays : todays.filter((s) => s.person !== me);
   const doneCount = todays.filter((s) => isFinished(statuses[s.id], sessionCount(household, s.group))).length;
   const color = (p: string) => personColor(p, household.roommates, household.colors);
+  const solo = household.mode === 'solo';
+  const minutes = (s: Slot) => minutesOf(household, s.group);
+  const minutesToday = todays.reduce((sum, s) => sum + minutes(s), 0);
+  const minutesDone = todays.filter((s) => isFinished(statuses[s.id], sessionCount(household, s.group))).reduce((sum, s) => sum + minutes(s), 0);
   const end = addDays(schedule.start_day, schedule.days - 1);
 
   const open = (s: Slot) => router.push({ pathname: '/task/[id]', params: { id: s.id } });
@@ -41,7 +47,7 @@ export default function Today() {
     return (
       <Row key={s.id} end={last} onPress={() => open(s)} onLongPress={() => toggle(s)}
         left={<Check on={done + missed >= n && st !== 'missed'} onPress={() => toggle(s)} />}
-        right={s.person === me ? (s.rest_before !== null ? `r${s.rest_before}` : '') : (
+        right={solo ? `${minutes(s)}m` : s.person === me ? (s.rest_before !== null ? `r${s.rest_before}` : '') : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Dot color={color(s.person)} /><T v="meta" style={{ fontSize: 12 }}>{s.person}</T>
           </View>
@@ -71,11 +77,11 @@ export default function Today() {
           </View>
           <View style={{ flex: 1 }} />
           <View style={{ alignItems: 'flex-end', paddingBottom: 3 }}>
-            <T style={{ fontFamily: font.mono, fontSize: 13 }}>{doneCount}/{todays.length}</T>
-            <T v="faint">done</T>
+            <T style={{ fontFamily: font.mono, fontSize: 13 }}>{solo ? `${minutesDone}/${minutesToday}` : `${doneCount}/${todays.length}`}</T>
+            <T v="faint">{solo ? 'min done' : 'done'}</T>
           </View>
         </View>
-        <ProgressLine value={todays.length ? doneCount / todays.length : 0} />
+        <ProgressLine value={solo ? (minutesToday ? minutesDone / minutesToday : 0) : todays.length ? doneCount / todays.length : 0} />
 
         {today < schedule.start_day || today > end ? (
           <Note>{today < schedule.start_day ? `The schedule starts on ${schedule.start_day}.` : 'This schedule has ended. Plan the next stretch from Setup.'}</Note>
@@ -88,7 +94,7 @@ export default function Today() {
           </>
         ) : null}
 
-        <Section title={me ? 'House' : 'Today'} link="Week" onLink={() => router.push('/calendar')} />
+        <Section title={me && !solo ? 'House' : 'Today'} link="Week" onLink={() => router.push('/calendar')} />
         {house.length ? house.map((s, i) => taskRow(s, i === house.length - 1))
           : <Note>{todays.length ? 'Nothing else today.' : 'Nothing due today.'}</Note>}
 
@@ -99,11 +105,12 @@ export default function Today() {
             <View key={d} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: c.line, borderStyle: 'dashed' }}>
               <T v="mono" style={{ width: 50, fontSize: 10.5 }} color={c.tx3}>{shortDay(d)} {dayNum(d)}</T>
               <T style={{ flex: 1, fontSize: 13 }} numberOfLines={1}>{day.length ? day.map((s) => plainTask(s.task)).join(', ') : '—'}</T>
-              <View style={{ flexDirection: 'row', gap: 4 }}>{day.map((s) => <Dot key={s.id} color={color(s.person)} />)}</View>
+              {solo ? <T v="mono" style={{ fontSize: 11 }}>{day.reduce((sum, s) => sum + minutes(s), 0)}m</T>
+                : <View style={{ flexDirection: 'row', gap: 4 }}>{day.map((s) => <Dot key={s.id} color={color(s.person)} />)}</View>}
             </View>
           );
         })}
-        <Note style={{ marginTop: 16 }}>Tap the box to strike a task through. Tap the name for options: covered, missed, skip.</Note>
+        <Note style={{ marginTop: 16 }}>Tap the box to strike a task through. Tap the name for options: {solo ? 'missed, skip' : 'covered, missed, skip'}.</Note>
       </ScrollView>
     </SafeAreaView>
   );

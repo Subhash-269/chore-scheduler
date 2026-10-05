@@ -13,6 +13,34 @@ export const CHORE_PRESETS: Preset[] = [
   { name: 'Stove', tasks: ['Stove'], frequency_days: 10, tolerance_days: 1, on: false, hint: 'every 10 days' },
 ];
 
+/** Solo starting chores, with rough minutes so no day gets heavy. */
+export const SOLO_PRESETS: Preset[] = [
+  { name: 'Dishes', tasks: ['Dishes'], frequency_days: 1, minutes: 15, on: true, hint: 'every day' },
+  { name: 'Vacuum', tasks: ['Vacuum'], frequency_days: 3, tolerance_days: 1, minutes: 20, on: true, hint: 'every 3 days, ±1' },
+  { name: 'Laundry', tasks: ['Laundry'], frequency_days: 7, minutes: 40, on: true, hint: 'weekly' },
+  { name: 'Bathroom', tasks: ['Bathroom'], frequency_days: 7, tolerance_days: 1, minutes: 30, on: true, hint: 'weekly, ±1 day' },
+  { name: 'Trash', tasks: ['Trash'], frequency_days: 7, tolerance_days: 1, minutes: 5, on: true, hint: 'weekly, ±1 day' },
+  { name: 'Plants', tasks: ['Plants'], frequency_days: 3, tolerance_days: 1, minutes: 5, on: false, hint: 'every 3 days' },
+];
+
+export function emptySoloHousehold(name: string): Household {
+  return {
+    mode: 'solo',
+    roommates: [name],
+    colors: {},
+    buffer_days: 0,
+    chore_groups: SOLO_PRESETS.filter((p) => p.on).map(({ on, hint, ...g }) => g),
+    days_off: {},
+    exclusions: {},
+    random_seed: 42,
+    start_day: todayIso(),
+    weeks_to_plan: 4,
+    daily_cap_minutes: 60,
+    busy_days: [],
+    busy_cap_minutes: 15,
+  };
+}
+
 export function emptyHousehold(): Household {
   return {
     mode: 'household',

@@ -23,6 +23,7 @@ export default function Pick() {
   if (!job?.result || !household) return <Loading label="loading candidates…" />;
 
   const candidates = job.result.candidates;
+  const solo = household.mode === 'solo';
   const chosen = candidates.find((x) => x.key === selected) ?? candidates[0];
 
   const publish = async () => {
@@ -42,7 +43,7 @@ export default function Pick() {
   return (
     <Screen footer={
       <View style={{ gap: 8 }}>
-        <Note style={{ marginTop: 0 }}>exc = rule exceptions · spread = most minus fewest tasks</Note>
+        <Note style={{ marginTop: 0 }}>{solo ? 'over = days past your cap · heaviest = minutes on the busiest normal day' : 'exc = rule exceptions · spread = most minus fewest tasks'}</Note>
         <BtnRow>
           <Btn kind="ghost" title="Preview" onPress={() => router.push({ pathname: '/plan/preview', params: { job: job.id, key: chosen.key } })} />
           <Btn title={`Use ${chosen.label}`} onPress={publish} loading={busy} disabled={!isAdmin} />
@@ -50,10 +51,12 @@ export default function Pick() {
       </View>
     }>
       <TopBar back="Back" />
-      <Header title="Pick a schedule" sub="Ranked by rule breaks, then rest, then fairness. Only MILP is proven optimal." />
+      <Header title={solo ? 'Pick your week' : 'Pick a schedule'}
+        sub={solo ? 'Balanced keeps every day under your cap and the heaviest day as light as possible. Earliest is the naive plan, for comparison.'
+          : 'Ranked by rule breaks, then rest, then fairness. Only MILP is proven optimal.'} />
       {job.result.warnings.map((w) => <Note key={w} tone="warn">{w}</Note>)}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, paddingBottom: 4 }}>
-        <T v="cap">algorithm</T><T v="cap">exc · spread</T>
+        <T v="cap">plan</T><T v="cap">{solo ? 'over · heaviest' : 'exc · spread'}</T>
       </View>
       {candidates.map((cand, i) => {
         const on = cand.key === chosen.key;
@@ -61,7 +64,7 @@ export default function Pick() {
           <View key={cand.key}>
             <Row end={on || i === candidates.length - 1} onPress={() => setSelected(cand.key)}
               left={<View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: on ? 5 : 1.5, borderColor: on ? c.tx : c.line2 }} />}
-              right={`${exceptions(cand.metrics)} · ${cand.metrics.workload_spread}`}>
+              right={solo ? `${cand.metrics.days_over_cap?.length ?? 0} · ${cand.metrics.heaviest_day_minutes}m` : `${exceptions(cand.metrics)} · ${cand.metrics.workload_spread}`}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <T>{cand.label}</T>
                 {cand.proven ? <Tag label="proven" tone="inv" /> : null}

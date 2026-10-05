@@ -9,6 +9,7 @@ import { exceptions, usePlan } from '@/data/usePlan';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Btn, BtnRow, Dot, Loading, Note, Screen, T, tap, TopBar } from '@/ui';
 import { FridgeGrid } from '@/ui/FridgeGrid';
+import { LoadBars, SoloGrid } from '@/ui/SoloBoard';
 
 /** Any of the six candidates on the full board, week by week, before anything is saved. */
 export default function Preview() {
@@ -34,6 +35,7 @@ export default function Preview() {
 
   if (!job?.result || !cand || !household) return <Loading label="loading preview…" />;
   const result = job.result;
+  const solo = household.mode === 'solo';
   const weeks = Math.ceil(result.days / 7);
   const start = addDays(result.start_day, week * 7);
   const dates = weekDates(start).filter((d) => d < addDays(result.start_day, result.days));
@@ -84,13 +86,27 @@ export default function Preview() {
       </ScrollView>
       <View style={{ paddingHorizontal: 12 }}>
         <View style={{ flexDirection: 'row', gap: 16, paddingHorizontal: 8, marginBottom: 10 }}>
-          <T v="mono">exc <T v="mono" color={c.tx}>{exceptions(cand.metrics)}</T></T>
-          <T v="mono">spread <T v="mono" color={c.tx}>{cand.metrics.workload_spread}</T></T>
-          <T v="mono">rest bal <T v="mono" color={c.tx}>{cand.metrics.rest_balance_spread}d</T></T>
+          {solo ? (
+            <>
+              <T v="mono">heaviest <T v="mono" color={c.tx}>{cand.metrics.heaviest_day_minutes}m</T></T>
+              <T v="mono">over cap <T v="mono" color={c.tx}>{cand.metrics.days_over_cap?.length ?? 0}</T></T>
+            </>
+          ) : (
+            <>
+              <T v="mono">exc <T v="mono" color={c.tx}>{exceptions(cand.metrics)}</T></T>
+              <T v="mono">spread <T v="mono" color={c.tx}>{cand.metrics.workload_spread}</T></T>
+              <T v="mono">rest bal <T v="mono" color={c.tx}>{cand.metrics.rest_balance_spread}d</T></T>
+            </>
+          )}
           {changed.size ? <T v="mono">changed <T v="mono" color={c.tx}>{changed.size}</T></T> : null}
         </View>
-        <FridgeGrid household={household} dates={dates} slots={cand.slots} today={todayIso()} changed={changed} showRest />
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingHorizontal: 8 }}>
+        {solo ? (
+          <>
+            <SoloGrid household={household} dates={dates} slots={cand.slots} today={todayIso()} changed={changed} />
+            <View style={{ paddingHorizontal: 8 }}><LoadBars household={household} dates={dates} slots={cand.slots} today={todayIso()} /></View>
+          </>
+        ) : <FridgeGrid household={household} dates={dates} slots={cand.slots} today={todayIso()} changed={changed} showRest />}
+        {solo ? null : <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingHorizontal: 8 }}>
           {household.roommates.map((p) => (
             <View key={p} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
               <Dot color={personColor(p, household.roommates, household.colors)} size={7} />
@@ -98,7 +114,7 @@ export default function Preview() {
             </View>
           ))}
           <T v="faint">totals</T>
-        </View>
+        </View>}
         {changed.size ? <Note style={{ paddingHorizontal: 8 }}>Dashed boxes differ from the live schedule.</Note> : null}
         {err ? <Note tone="bad" style={{ paddingHorizontal: 8 }}>{err}</Note> : null}
       </View>

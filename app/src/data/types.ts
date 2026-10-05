@@ -10,6 +10,8 @@ export type ChoreGroup = {
   every_nth?: number | null;
   /** app-only: named sessions within a day, e.g. breakfast / lunch / dinner */
   sessions?: string[] | null;
+  /** solo mode: rough minutes, used to keep any one day from getting heavy */
+  minutes?: number | null;
 };
 
 export type Household = {
@@ -23,6 +25,10 @@ export type Household = {
   random_seed: number | 'auto';
   start_day: string;
   weeks_to_plan: number;
+  // solo mode
+  daily_cap_minutes?: number;
+  busy_days?: string[];
+  busy_cap_minutes?: number;
 };
 
 export type Slot = {
@@ -47,6 +53,10 @@ export type Metrics = {
   avg_rest: number;
   min_rest: number;
   total_tasks: number;
+  // solo mode
+  daily_minutes?: Record<string, number>;
+  heaviest_day_minutes?: number;
+  days_over_cap?: string[];
 };
 
 export type Violation = Record<string, string | number>;
@@ -71,6 +81,7 @@ export type AlgoProgress = {
 
 export type PlanJob = {
   id: string;
+  mode?: 'household' | 'solo';
   status: 'running' | 'done' | 'failed';
   started_at: string;
   progress: Record<string, AlgoProgress>;

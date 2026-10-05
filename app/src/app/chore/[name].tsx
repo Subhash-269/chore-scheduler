@@ -28,6 +28,7 @@ export default function EditChore() {
   if (!household) return <Loading />;
 
   const piggy = !!g.piggyback_on;
+  const solo = household.mode === 'solo';
   const hosts = household.chore_groups.filter((x) => x.name !== name && !x.piggyback_on);
   const sessions = g.sessions?.length ?? 1;
 
@@ -36,8 +37,8 @@ export default function EditChore() {
     if (!groupName) return setErr('Give the chore a name.');
     const tasks = g.tasks.length ? g.tasks : [groupName];
     const clean: ChoreGroup = piggy
-      ? { name: groupName, tasks, piggyback_on: g.piggyback_on, every_nth: g.every_nth ?? 2, tolerance_days: g.tolerance_days ?? 0, sessions: g.sessions }
-      : { name: groupName, tasks, frequency_days: g.frequency_days ?? 7, tolerance_days: g.tolerance_days ?? 0, buffer_days: g.buffer_days, sessions: g.sessions };
+      ? { name: groupName, tasks, piggyback_on: g.piggyback_on, every_nth: g.every_nth ?? 2, tolerance_days: g.tolerance_days ?? 0, sessions: g.sessions, minutes: g.minutes }
+      : { name: groupName, tasks, frequency_days: g.frequency_days ?? 7, tolerance_days: g.tolerance_days ?? 0, buffer_days: g.buffer_days, sessions: g.sessions, minutes: g.minutes };
     const groups = isNew ? [...household.chore_groups, clean]
       : household.chore_groups.map((x) => (x.name === name ? clean : x.piggyback_on === name ? { ...x, piggyback_on: groupName } : x));
     const exclusions = Object.fromEntries(household.roommates.map((p) => {
@@ -114,12 +115,19 @@ export default function EditChore() {
         ) : (
           <>
             <KV k="Every"><Stepper value={g.frequency_days ?? 7} min={1} max={60} format={(v) => `${v}d`} onChange={(v) => setG({ ...g, frequency_days: v })} /></KV>
-            <KV k="Own rest buffer">
-              <Stepper value={g.buffer_days ?? household.buffer_days} min={0} max={10} format={(v) => (g.buffer_days == null ? `house ${v}d` : `${v}d`)}
-                onChange={(v) => setG({ ...g, buffer_days: v })} />
-            </KV>
+            {solo ? null : (
+              <KV k="Own rest buffer">
+                <Stepper value={g.buffer_days ?? household.buffer_days} min={0} max={10} format={(v) => (g.buffer_days == null ? `house ${v}d` : `${v}d`)}
+                  onChange={(v) => setG({ ...g, buffer_days: v })} />
+              </KV>
+            )}
           </>
         )}
+        {solo ? (
+          <KV k="Takes about">
+            <Stepper value={g.minutes ?? 15} min={5} max={180} format={(v) => `${v}m`} onChange={(v) => setG({ ...g, minutes: Math.round(v / 5) * 5 || 5 })} />
+          </KV>
+        ) : null}
         <KV k="Tolerance"><Stepper value={g.tolerance_days ?? 0} min={0} max={5} format={(v) => `±${v}`} onChange={(v) => setG({ ...g, tolerance_days: v })} /></KV>
         <KV k="Times per day" end>
           <Stepper value={sessions} min={1} max={6}
@@ -128,7 +136,7 @@ export default function EditChore() {
       </View>
       {sessions > 1 ? <Note>One person does all {sessions} sessions that day. Each one gets its own strike on the fridge board.</Note> : null}
 
-      <Section title="Who can do it" />
+      {solo ? null : <><Section title="Who can do it" />
       <Pills>
         {household.roommates.map((p) => {
           const can = !excluded.includes(p);
@@ -138,7 +146,7 @@ export default function EditChore() {
           );
         })}
       </Pills>
-      <Note>Struck-through people are never assigned this chore. The solver checks there are still enough people for the rest buffer.</Note>
+      <Note>Struck-through people are never assigned this chore. The solver checks there are still enough people for the rest buffer.</Note></>}
       {err ? <Note tone="bad">{err}</Note> : null}
       <Btn style={{ marginTop: 18 }} title={isNew ? 'Add chore' : 'Save'} onPress={save} loading={busy} />
     </Screen>

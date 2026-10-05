@@ -4,7 +4,7 @@ import {
 } from 'react';
 
 import { api, ApiError, getHouseholdId, getToken, setHouseholdId, type Membership, type User } from './api';
-import { emptyHousehold } from './presets';
+import { emptyHousehold, emptySoloHousehold } from './presets';
 import type { Household, Schedule, Slot, TaskStatus } from './types';
 
 /**
@@ -81,12 +81,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return;
     }
     let mine: Membership[];
+    let userName = 'Me';
     try {
       const r = await api.me();
       setError(null);
       setUser(r.user);
       setMemberships(r.households);
       mine = r.households;
+      userName = r.user.name;
     } catch (e) {
       return fail(e);
     }
@@ -111,7 +113,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setHousehold(null);
         setSchedule(null);
         // resume onboarding after a restart: start a fresh draft if there isn't one
-        setDraft((d) => d ?? emptyHousehold());
+        // households created from "Just me" are named that by onboarding
+        const solo = mine.find((m) => m.id === id)?.name === 'Just me';
+        setDraft((d) => d ?? (solo ? emptySoloHousehold(userName) : emptyHousehold()));
         setPhase('onboarding');
         return;
       }

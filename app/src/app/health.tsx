@@ -35,6 +35,14 @@ export default function Health() {
           ))}
           <Note>No valid alternative existed for these: everyone else was off, resting, or excluded.</Note>
         </>
+      ) : household.mode === 'solo' ? (
+        <>
+          <Section title={`Days over your cap · ${m.days_over_cap?.length ?? 0}`} />
+          {(m.days_over_cap ?? []).map((d, i, arr) => (
+            <Row key={d} end={i === arr.length - 1} right={`${m.daily_minutes?.[d] ?? 0} min`}>{d}</Row>
+          ))}
+          <Note>{(m.days_over_cap ?? []).length ? 'Usually daily chores on a busy or off day: they can’t move.' : 'Every day fits its cap.'} Heaviest normal day: {m.heaviest_day_minutes ?? 0} min.</Note>
+        </>
       ) : m.buffer_violations ? (
         <>
           <Section title={`Rest buffer · ${m.buffer_violations}`} />
