@@ -141,6 +141,17 @@ export const api = {
     await setToken(r.token);
     return r.user;
   },
+  providers: () => call<{ email: boolean; apple: boolean; google: boolean }>('GET', '/auth/providers', undefined, 5000),
+  appleLogin: async (identity_token: string, name?: string) => {
+    const r = await call<{ token: string; user: User }>('POST', '/auth/apple', { identity_token, name });
+    await setToken(r.token);
+    return r.user;
+  },
+  googleLogin: async (id_token: string) => {
+    const r = await call<{ token: string; user: User }>('POST', '/auth/google', { id_token });
+    await setToken(r.token);
+    return r.user;
+  },
   logout: async () => {
     try { await call('POST', '/auth/logout'); } catch {}
     await setToken(null);

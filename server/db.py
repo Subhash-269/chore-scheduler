@@ -26,6 +26,17 @@ CREATE TABLE IF NOT EXISTS users (
     created_at  REAL NOT NULL
 );
 
+-- Sign in with Apple / Google: one row per provider account, linked to a user.
+-- Users who only ever sign in this way have pw_hash '!' (no password).
+CREATE TABLE IF NOT EXISTS identities (
+    provider    TEXT NOT NULL CHECK (provider IN ('apple', 'google')),
+    subject     TEXT NOT NULL,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email       TEXT,
+    created_at  REAL NOT NULL,
+    PRIMARY KEY (provider, subject)
+);
+
 CREATE TABLE IF NOT EXISTS tokens (
     token_hash  TEXT PRIMARY KEY,
     user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

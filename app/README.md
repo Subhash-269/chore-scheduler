@@ -38,21 +38,34 @@ where you can type the address, or set `EXPO_PUBLIC_API_URL` before
 
 Browser preview: `npx expo start --web`.
 
-## What's in phase 1
+## What's in the app
 
-- Onboarding: household → roommates (and which one is you) → chores → availability
+- Accounts: email + password, Sign in with Apple, Google (in builds that are set up for it)
+- Households: start one or join with a 6-character code; admins and members; switch between households
+- Onboarding: roommates (and which one is you), chores, availability
 - Building: all six algorithms with live per-algorithm progress
-- Pick a schedule (ranked like `main.py`), with a week preview of the selected one
-- Preview any candidate on the full fridge board, week by week, before publishing
-- Today, Calendar (fridge board / list / only me), Team, person detail
+- Pick a schedule (ranked like `main.py`), then preview any candidate on the full fridge board before publishing
+- Today, Calendar (fridge board / list / only me), Team, person detail, Members with invite codes
 - Strikethrough status: tap to strike, again for missed; long-press for covered,
   not needed, or per-session strikes for chores done several times a day
-- Setup: edit / add / delete chores (frequency, piggyback, tolerance, own buffer,
-  times per day, who can do it), house rules, re-plan, schedule health
-- Customize: light / dark / system, which roommate this phone belongs to, CSV/DOCX/PDF export
+- Setup (admins): edit / add / delete chores, house rules, re-plan, schedule health
+- Settings: light / dark / system, households, sign out, delete account, CSV/DOCX/PDF export
 
-Data lives in `server/data/` (gitignored): `household.json`, the published
-`schedule.json`, `statuses.json`, and `schedule_state.json` (the same
+## Sign in with Apple and Google
+
+Apple works in Expo Go on an iPhone. Google needs a development build
+(`npx eas-cli@latest build --profile development`), because Expo Go doesn't
+include its native module, plus these environment variables:
+
+| Where | Variable | Value |
+|---|---|---|
+| app | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | the **Web** OAuth client ID (Google signs the ID token for it) |
+| app | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | the **iOS** OAuth client ID (also sets the URL scheme in `app.config.ts`) |
+| server | `GOOGLE_CLIENT_IDS` | the same client IDs, comma-separated |
+| server | `APPLE_AUDIENCES` | optional; defaults to `com.subhash269.chores,host.exp.Exponent` |
+
+Data lives in `server/data/` (gitignored): `chores.db` (accounts, households,
+schedules, statuses) and one `schedule_state.json` per household (the same
 carry-over file `main.py` writes).
 
 ## Checks

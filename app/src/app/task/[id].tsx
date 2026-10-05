@@ -52,7 +52,7 @@ export default function TaskSheet() {
         <Strike n={n} done={done} missed={missed} size={26} fontFamily={font.semibold} thickness={2.5}>{plainTask(slot.task)}</Strike>
         {n > 1 ? <T v="mono">{done}/{n}</T> : null}
       </View>
-      {group ? <T v="meta" style={{ marginTop: 6 }}>{group.piggyback_on ? `Rides on every ${ruleLabel(group).split(' ')[0]} ${group.piggyback_on}` : `Every ${group.frequency_days} day${group.frequency_days === 1 ? '' : 's'}`}{group.tolerance_days ? `, ±${group.tolerance_days} day` : ''}.</T> : null}
+      {group ? <T v="meta" style={{ marginTop: 6 }}>{group.piggyback_on ? `Rides on every ${ruleLabel(group).split(' ')[0]} ${group.piggyback_on}` : (group.frequency_days === 1 ? 'Every day' : `Every ${group.frequency_days} days`)}{group.tolerance_days ? `, ±${group.tolerance_days} day` : ''}.</T> : null}
 
       <View style={{ marginTop: 14 }}>
         <KV k="Assigned"><View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Dot color={color(slot.person)} /><T>{slot.person}</T></View></KV>

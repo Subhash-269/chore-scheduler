@@ -8,6 +8,8 @@ bearer token (Authorization: Bearer <token>) from /auth/signup or /auth/login.
 
     GET    /health
     POST   /auth/signup | /auth/login | /auth/logout
+    POST   /auth/apple | /auth/google      sign in with a provider identity token
+    GET    /auth/providers                  which sign-in methods this server accepts
     GET    /me                                 user + households
     DELETE /me                                 delete the account (App Store requirement)
 
@@ -38,7 +40,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from . import auth
+from . import auth, social
 from .db import DB, dumps, loads, now
 from .solver_service import ALGORITHMS, ConfigError, normalize_config, solve, write_state
 
@@ -110,6 +112,16 @@ class Signup(BaseModel):
 class Login(BaseModel):
     email: str
     password: str
+
+
+class AppleLogin(BaseModel):
+    identity_token: str
+    # Apple only shares the name on the very first sign-in, so the app passes it along
+    name: Optional[str] = Field(None, max_length=60)
+
+
+class GoogleLogin(BaseModel):
+    id_token: str
 
 
 class NewHousehold(BaseModel):
@@ -251,6 +263,58 @@ def login(body: Login):
     if not u or not auth.verify_password(body.password, u["pw_hash"]):
         raise HTTPException(401, "Wrong email or password")
     return {"token": _issue_token(u["id"]), "user": _user_json(u)}
+
+
+def _social_login(provider, subject, email, email_verified, name):
+    """Sign in with a verified provider identity: the linked account if there is
+    one, else a provider-only account with the same verified email, else a new one.
+
+    Password accounts are never auto-linked: sign-up doesn't verify emails, so
+    someone could pre-register a victim's address and have the victim's later
+    Google/Apple sign-in land in an account whose password they know."""
+    ident = db().one("SELECT user_id FROM identities WHERE provider = ? AND subject = ?", provider, subject)
+    if ident:
+        uid = ident["user_id"]
+    else:
+        existing = db().one("SELECT id, pw_hash FROM users WHERE email = ?", email) if email else None
+        if existing and (existing["pw_hash"] != "!" or not email_verified):
+            raise HTTPException(409, "An account with this email already exists - sign in with your password")
+        with db().tx() as c:
+            if existing:
+                uid = existing["id"]
+            else:
+                # Apple may hide the email behind a relay address, or omit it after the first sign-in
+                placeholder = email or f"{provider}-{subject}@users.chores.invalid"
+                uid = c.execute("INSERT INTO users (email, name, pw_hash, created_at) VALUES (?, ?, '!', ?)",
+                                (placeholder, (name or "").strip() or "New roommate", now())).lastrowid
+            c.execute("INSERT INTO identities (provider, subject, user_id, email, created_at) VALUES (?, ?, ?, ?, ?)",
+                      (provider, subject, uid, email, now()))
+    return {"token": _issue_token(uid), "user": _user_json(db().one("SELECT * FROM users WHERE id = ?", uid))}
+
+
+@app.get("/auth/providers")
+def providers():
+    return {"email": True, "apple": True, "google": social.google_enabled()}
+
+
+@app.post("/auth/apple")
+def login_apple(body: AppleLogin):
+    try:
+        subject, email, verified = social.verify_apple(body.identity_token)
+    except social.SocialAuthError as e:
+        raise HTTPException(401, str(e))
+    return _social_login("apple", subject, email, verified, body.name)
+
+
+@app.post("/auth/google")
+def login_google(body: GoogleLogin):
+    if not social.google_enabled():
+        raise HTTPException(503, "Google sign-in isn't set up on this server yet")
+    try:
+        subject, email, verified, name = social.verify_google(body.id_token)
+    except social.SocialAuthError as e:
+        raise HTTPException(401, str(e))
+    return _social_login("google", subject, email, verified, name)
 
 
 @app.post("/auth/logout")
