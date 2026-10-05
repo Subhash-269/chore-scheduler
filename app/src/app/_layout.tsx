@@ -9,12 +9,15 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppDataProvider } from '@/data/AppData';
+import { PrefsProvider } from '@/data/prefs';
+import { useReminderSync } from '@/data/reminders';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 
 SplashScreen.preventAutoHideAsync();
 
 function Navigator() {
   const { c, isDark } = useTheme();
+  useReminderSync();
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
@@ -41,7 +44,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AppDataProvider>
-          <Navigator />
+          <PrefsProvider>
+            <Navigator />
+          </PrefsProvider>
         </AppDataProvider>
       </ThemeProvider>
     </SafeAreaProvider>

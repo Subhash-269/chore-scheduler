@@ -23,6 +23,8 @@ Bob is off on weekends and Carol on Fridays. No real names or data.
 | `15-solo-today.png` | Solo: Today in minutes |
 | `16-solo-board.png` | Solo board: chores by day |
 | `17-solo-load.png` | Solo load: minutes per day against the cap |
+| `18-sessions-today.png` | A chore done 3× a day, 2 of 3 sessions struck |
+| `19-customize.png` | Customize: what Today shows, reminders |
 
 ## Refreshing them
 

@@ -127,7 +127,7 @@ cd app && npx tsc --noEmit && npx expo lint                           # app type
 | 2c | Requests (day off, swap) with admin preview and approval | done |
 | 2d | Push notifications, hosted server | next (needs the Apple membership and a host) |
 | 3a | Solo mode: one person, minutes balanced across days under a daily cap, lighter busy days | done |
-| 3b | Customisation (what Today shows, reminders), polish for chores done several times a day | next |
+| 3b | Customise Today, morning and evening reminders (local, work in Expo Go), one-tap strikes for chores done several times a day | done |
 | 4 | Home and lock-screen widgets, Live Activities, kitchen-tablet fridge board, App Store release | planned |
 
 ## Privacy

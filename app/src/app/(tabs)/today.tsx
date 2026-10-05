@@ -9,21 +9,27 @@ import { isFinished, strikeCounts } from '@/data/derive';
 import type { Slot } from '@/data/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font } from '@/theme/tokens';
+import { usePrefs } from '@/data/prefs';
 import { minutesOf } from '@/ui/SoloBoard';
 import { Check, Dot, Loading, Note, ProgressLine, Row, Section, Strike, T, Tag, TopBar } from '@/ui';
 
 export default function Today() {
   const { c, personColor } = useTheme();
-  const { household, schedule, statuses, me, refresh, cycleStatus, setStatus } = useAppData();
+  const { household, schedule, statuses, me, refresh, cycleStatus, setStatus, strikeNextSession } = useAppData();
+  const { prefs } = usePrefs();
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => { setRefreshing(true); await refresh(); setRefreshing(false); }, [refresh]);
 
   if (!household || !schedule) return <Loading />;
   const today = todayIso();
   const todays = schedule.slots.filter((s) => s.date === today);
-  // solo: one list - every task is yours
-  const mine = household.mode === 'solo' ? [] : todays.filter((s) => s.person === me);
-  const house = household.mode === 'solo' ? todays : todays.filter((s) => s.person !== me);
+  // solo: one list - every task is yours. Otherwise Customize decides the sections.
+  const yours = todays.filter((s) => s.person === me);
+  const others = todays.filter((s) => s.person !== me);
+  const soloMode = household.mode === 'solo';
+  const mine = soloMode || !prefs.yoursFirst ? [] : yours;
+  const house = soloMode ? todays : prefs.yoursFirst ? (prefs.showHouse ? others : []) : prefs.showHouse ? todays : yours;
+  const houseTitle = soloMode ? 'Today' : prefs.yoursFirst ? 'House' : prefs.showHouse ? 'Today' : 'Yours';
   const doneCount = todays.filter((s) => isFinished(statuses[s.id], sessionCount(household, s.group))).length;
   const color = (p: string) => personColor(p, household.roommates, household.colors);
   const solo = household.mode === 'solo';
@@ -35,7 +41,7 @@ export default function Today() {
   const open = (s: Slot) => router.push({ pathname: '/task/[id]', params: { id: s.id } });
   const toggle = (s: Slot) => {
     const n = sessionCount(household, s.group);
-    if (n > 1) return open(s); // several sessions: strike them one by one in the sheet
+    if (n > 1) return strikeNextSession(s).catch(() => {}); // several a day: strike the next session
     if (statuses[s.id]?.state === 'done') setStatus(s, null).catch(() => {});
     else cycleStatus(s).catch(() => {});
   };
@@ -62,7 +68,7 @@ export default function Today() {
     );
   };
 
-  const upcoming = [1, 2, 3, 4].map((i) => addDays(today, i)).filter((d) => d <= end);
+  const upcoming = Array.from({ length: prefs.nextDays }, (_, i) => addDays(today, i + 1)).filter((d) => d <= end);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.bg }}>
@@ -94,9 +100,9 @@ export default function Today() {
           </>
         ) : null}
 
-        <Section title={me && !solo ? 'House' : 'Today'} link="Week" onLink={() => router.push('/calendar')} />
+        {house.length || !mine.length ? <Section title={me ? houseTitle : 'Today'} link="Week" onLink={() => router.push('/calendar')} /> : null}
         {house.length ? house.map((s, i) => taskRow(s, i === house.length - 1))
-          : <Note>{todays.length ? 'Nothing else today.' : 'Nothing due today.'}</Note>}
+          : !mine.length ? <Note>{todays.length ? 'Nothing else today.' : 'Nothing due today.'}</Note> : null}
 
         {upcoming.length ? <Section title="Next days" /> : null}
         {upcoming.map((d) => {

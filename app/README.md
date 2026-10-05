@@ -88,7 +88,7 @@ need a new build. JavaScript changes load live, as they do in Expo Go.
 - Strikethrough status: tap to strike, again for missed; long-press for covered,
   not needed, or per-session strikes for chores done several times a day
 - Setup (admins): edit / add / delete chores, house rules, re-plan, schedule health
-- Settings: light / dark / system, households, sign out, delete account, CSV/DOCX/PDF export
+- Settings: light / dark / system, what Today shows, morning digest and evening nudge (local notifications), households, sign out, delete account, CSV/DOCX/PDF export
 
 ## Sign in with Apple and Google
 

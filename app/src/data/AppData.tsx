@@ -41,6 +41,8 @@ type AppDataValue = {
   setStatus: (slot: Slot, status: TaskStatus | null) => Promise<void>;
   /** tap on the fridge board: to do -> done -> missed -> to do */
   cycleStatus: (slot: Slot) => Promise<void>;
+  /** chores done several times a day: strike the next open session (clears once all are done) */
+  strikeNextSession: (slot: Slot) => Promise<void>;
   /** onboarding keeps a draft here until the household is saved */
   draft: Household | null;
   setDraft: Dispatch<SetStateAction<Household | null>>;
@@ -208,14 +210,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await setStatus(slot, next);
   }, [statuses, setStatus]);
 
+  const strikeNextSession = useCallback(async (slot: Slot) => {
+    const n = sessionCount(household, slot.group);
+    const cur = statuses[slot.id];
+    const sessions = Array.from({ length: n }, (_, i) => cur?.sessions?.[i] ?? (cur?.state === 'done' ? 'done' : null));
+    const next = sessions.indexOf(null);
+    if (next === -1) return setStatus(slot, null); // all struck: tap again to clear, like the board
+    sessions[next] = 'done';
+    const done = sessions.filter((x) => x === 'done').length;
+    await setStatus(slot, { state: done === n ? 'done' : 'partial', sessions });
+  }, [household, statuses, setStatus]);
+
   const me = membership?.roommate ?? pendingMe;
 
   const value = useMemo<AppDataValue>(() => ({
     phase, error, user, memberships, membership, isAdmin: membership?.role === 'admin',
     household, warnings, schedule, statuses, waiting, me, setMe, refresh, selectHousehold, signOut,
-    saveHousehold, setStatus, cycleStatus, draft, setDraft,
+    saveHousehold, setStatus, cycleStatus, strikeNextSession, draft, setDraft,
   }), [phase, error, user, memberships, membership, household, warnings, schedule, statuses, waiting, me, setMe, refresh,
-    selectHousehold, signOut, saveHousehold, setStatus, cycleStatus, draft]);
+    selectHousehold, signOut, saveHousehold, setStatus, cycleStatus, strikeNextSession, draft]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

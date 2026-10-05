@@ -15,7 +15,7 @@ type Mode = 'board' | 'load' | 'list' | 'me';
 
 export default function Calendar() {
   const { c, personColor } = useTheme();
-  const { household, schedule, statuses, me, cycleStatus } = useAppData();
+  const { household, schedule, statuses, me, cycleStatus, strikeNextSession } = useAppData();
   const today = todayIso();
   const [start, setStart] = useState(() => weekStart(today));
   const [mode, setMode] = useState<Mode>('board');
@@ -24,7 +24,8 @@ export default function Calendar() {
   const dates = weekDates(start);
   const solo = household.mode === 'solo';
   const open = (s: Slot) => router.push({ pathname: '/task/[id]', params: { id: s.id } });
-  const strike = (s: Slot) => (sessionCount(household, s.group) > 1 ? open(s) : cycleStatus(s).catch(() => {}));
+  // several a day: each tap strikes the next session; long-press opens the sheet
+  const strike = (s: Slot) => (sessionCount(household, s.group) > 1 ? strikeNextSession(s) : cycleStatus(s)).catch(() => {});
   const color = (p: string) => personColor(p, household.roommates, household.colors);
   const inWeek = schedule.slots.filter((s) => dates.includes(s.date) && (mode !== 'me' || s.person === me));
 
