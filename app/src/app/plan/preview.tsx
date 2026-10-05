@@ -15,7 +15,7 @@ export default function Preview() {
   const { c, personColor } = useTheme();
   const params = useLocalSearchParams<{ job: string; key: string }>();
   const { job } = usePlan(params.job);
-  const { household, schedule, refresh } = useAppData();
+  const { household, schedule, refresh, isAdmin } = useAppData();
   const [key, setKey] = useState(params.key);
   const [week, setWeek] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -56,7 +56,7 @@ export default function Preview() {
     <Screen padded={false} footer={
       <BtnRow>
         <Btn kind="ghost" title="Back" onPress={() => router.back()} />
-        <Btn title={`Use ${cand.label}`} onPress={publish} loading={busy} />
+        <Btn title={`Use ${cand.label}`} onPress={publish} loading={busy} disabled={!isAdmin} />
       </BtnRow>
     }>
       <View style={{ paddingHorizontal: 20 }}>

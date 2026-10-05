@@ -13,7 +13,7 @@ import { toggleDay, WeekdayPicker } from '@/ui/WeekdayPicker';
 export default function Person() {
   const { c, isDark, personColor } = useTheme();
   const { name } = useLocalSearchParams<{ name: string }>();
-  const { household, schedule, me, setMe, saveHousehold } = useAppData();
+  const { household, schedule, me, setMe, saveHousehold, isAdmin } = useAppData();
   const [editing, setEditing] = useState(false);
   const [daysOff, setDaysOff] = useState<string[]>(household?.days_off[name] ?? []);
   const [colorPick, setColorPick] = useState<string | undefined>(household?.colors[name]);
@@ -50,7 +50,7 @@ export default function Person() {
 
   return (
     <Screen footer={editing ? <Btn title="Save" onPress={save} loading={busy} /> : undefined}>
-      <TopBar back="Household" action={editing ? 'Cancel' : 'Edit'} onAction={() => setEditing(!editing)} />
+      <TopBar back="Household" action={isAdmin ? (editing ? 'Cancel' : 'Edit') : undefined} onAction={() => setEditing(!editing)} />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <Dot color={color} size={11} />
         <T v="h1">{name}</T>
@@ -71,7 +71,7 @@ export default function Person() {
           <Section title="Off every week" />
           <WeekdayPicker off={daysOff} onToggle={(day) => setDaysOff((cur) => toggleDay(cur, day))} />
           <Note>Exclusions (“never assign”) are set per chore in Setup → chore → Who can do it.</Note>
-          {me !== name ? <Btn kind="ghost" small style={{ marginTop: 16 }} title="This is me" onPress={() => setMe(name)} /> : null}
+          {me !== name ? <Btn kind="ghost" small style={{ marginTop: 16 }} title="This is me" onPress={() => { setMe(name).catch(() => {}); }} /> : null}
           {err ? <Note tone="bad">{err}</Note> : null}
         </>
       ) : (

@@ -1,25 +1,40 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createContext, useCallback, useContext, useEffect, useMemo, useState,
   type Dispatch, type ReactNode, type SetStateAction,
 } from 'react';
 
-import { api, ApiError } from './api';
+import { api, ApiError, getHouseholdId, getToken, setHouseholdId, type Membership, type User } from './api';
+import { emptyHousehold } from './presets';
 import type { Household, Schedule, Slot, TaskStatus } from './types';
 
-type Phase = 'loading' | 'offline' | 'onboarding' | 'unplanned' | 'ready';
+/**
+ * Where the app is:
+ *  offline     - server unreachable
+ *  signedOut   - no session
+ *  noHousehold - signed in, not in any household yet (create or join)
+ *  onboarding  - household exists, no config yet (admin sets it up)
+ *  unplanned   - config, but nothing published
+ *  ready       - live schedule
+ */
+type Phase = 'loading' | 'offline' | 'signedOut' | 'noHousehold' | 'onboarding' | 'unplanned' | 'ready';
 
 type AppDataValue = {
   phase: Phase;
   error: string | null;
+  user: User | null;
+  memberships: Membership[];
+  membership: Membership | null;
+  isAdmin: boolean;
   household: Household | null;
   warnings: string[];
   schedule: Schedule | null;
   statuses: Record<string, TaskStatus>;
-  /** which roommate is using this phone (stored on the device) */
+  /** which roommate this account is in the current household */
   me: string | null;
-  setMe: (name: string | null) => void;
+  setMe: (name: string | null) => Promise<void>;
   refresh: () => Promise<void>;
+  selectHousehold: (id: number) => Promise<void>;
+  signOut: () => Promise<void>;
   saveHousehold: (h: Household) => Promise<string[]>;
   setStatus: (slot: Slot, status: TaskStatus | null) => Promise<void>;
   /** tap on the fridge board: to do -> done -> missed -> to do */
@@ -30,43 +45,74 @@ type AppDataValue = {
 };
 
 const Ctx = createContext<AppDataValue | null>(null);
-const ME_KEY = 'chores.me';
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<Phase>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [currentId, setCurrentId] = useState<number | null>(null);
   const [household, setHousehold] = useState<Household | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [statuses, setStatuses] = useState<Record<string, TaskStatus>>({});
-  const [me, setMeState] = useState<string | null>(null);
   const [draft, setDraft] = useState<Household | null>(null);
+  // "you" picked during onboarding, before the household is saved
+  const [pendingMe, setPendingMe] = useState<string | null>(null);
 
-  useEffect(() => {
-    AsyncStorage.getItem(ME_KEY).then((v) => v && setMeState(v)).catch(() => {});
-  }, []);
-
-  const setMe = useCallback((name: string | null) => {
-    setMeState(name);
-    (name ? AsyncStorage.setItem(ME_KEY, name) : AsyncStorage.removeItem(ME_KEY)).catch(() => {});
-  }, []);
+  const membership = memberships.find((m) => m.id === currentId) ?? null;
 
   const refresh = useCallback(async () => {
+    const fail = (e: unknown) => {
+      if (e instanceof ApiError && e.status === 401) {
+        setUser(null);
+        setPhase('signedOut');
+        return;
+      }
+      setError((e as Error).message);
+      setPhase('offline');
+    };
+    if (!(await getToken())) {
+      setUser(null);
+      setPhase('signedOut');
+      return;
+    }
+    let mine: Membership[];
+    try {
+      const r = await api.me();
+      setError(null);
+      setUser(r.user);
+      setMemberships(r.households);
+      mine = r.households;
+    } catch (e) {
+      return fail(e);
+    }
+    if (!mine.length) {
+      setHousehold(null);
+      setSchedule(null);
+      setPhase('noHousehold');
+      return;
+    }
+    let id = await getHouseholdId();
+    if (!id || !mine.some((m) => m.id === id)) {
+      id = mine[0].id;
+      await setHouseholdId(id);
+    }
+    setCurrentId(id);
     try {
       const h = await api.getHousehold();
-      setError(null);
       setHousehold(h.household);
       setWarnings(h.warnings);
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
         setHousehold(null);
         setSchedule(null);
+        // resume onboarding after a restart: start a fresh draft if there isn't one
+        setDraft((d) => d ?? emptyHousehold());
         setPhase('onboarding');
         return;
       }
-      setError((e as Error).message);
-      setPhase('offline');
-      return;
+      return fail(e);
     }
     try {
       const s = await api.getSchedule();
@@ -77,10 +123,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       if (e instanceof ApiError && e.status === 404) {
         setSchedule(null);
         setPhase('unplanned');
-      } else {
-        setError((e as Error).message);
-        setPhase('offline');
-      }
+      } else fail(e);
     }
   }, []);
 
@@ -90,12 +133,43 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     refresh();
   }, [refresh]);
 
+  const selectHousehold = useCallback(async (id: number) => {
+    await setHouseholdId(id);
+    setPhase('loading');
+    await refresh();
+  }, [refresh]);
+
+  const signOut = useCallback(async () => {
+    await api.logout();
+    setUser(null);
+    setMemberships([]);
+    setHousehold(null);
+    setSchedule(null);
+    setStatuses({});
+    setPhase('signedOut');
+  }, []);
+
+  const setMe = useCallback(async (name: string | null) => {
+    if (!user || !membership) {
+      setPendingMe(name);
+      return;
+    }
+    await api.patchMember(user.id, { roommate: name ?? '' });
+    setMemberships((prev) => prev.map((m) => (m.id === membership.id ? { ...m, roommate: name } : m)));
+  }, [user, membership]);
+
   const saveHousehold = useCallback(async (h: Household) => {
     const res = await api.putHousehold(h);
     setHousehold(res.household);
     setWarnings(res.warnings);
+    // link the account to the roommate chosen during onboarding
+    if (pendingMe && user && res.household.roommates.includes(pendingMe)) {
+      await api.patchMember(user.id, { roommate: pendingMe }).catch(() => {});
+      setMemberships((prev) => prev.map((m) => (m.id === currentId ? { ...m, roommate: pendingMe } : m)));
+      setPendingMe(null);
+    }
     return res.warnings;
-  }, []);
+  }, [pendingMe, user, currentId]);
 
   const setStatus = useCallback(async (slot: Slot, status: TaskStatus | null) => {
     const before = statuses[slot.id];
@@ -126,11 +200,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await setStatus(slot, next);
   }, [statuses, setStatus]);
 
+  const me = membership?.roommate ?? pendingMe;
+
   const value = useMemo<AppDataValue>(() => ({
-    phase, error, household, warnings, schedule, statuses, me, setMe,
-    refresh, saveHousehold, setStatus, cycleStatus, draft, setDraft,
-  }), [phase, error, household, warnings, schedule, statuses, me, setMe, refresh, saveHousehold, setStatus,
-    cycleStatus, draft]);
+    phase, error, user, memberships, membership, isAdmin: membership?.role === 'admin',
+    household, warnings, schedule, statuses, me, setMe, refresh, selectHousehold, signOut,
+    saveHousehold, setStatus, cycleStatus, draft, setDraft,
+  }), [phase, error, user, memberships, membership, household, warnings, schedule, statuses, me, setMe, refresh,
+    selectHousehold, signOut, saveHousehold, setStatus, cycleStatus, draft]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

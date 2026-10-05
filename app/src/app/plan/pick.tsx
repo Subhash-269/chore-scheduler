@@ -14,7 +14,7 @@ export default function Pick() {
   const { c } = useTheme();
   const { job: jobId } = useLocalSearchParams<{ job: string }>();
   const { job, error } = usePlan(jobId);
-  const { household, refresh } = useAppData();
+  const { household, refresh, isAdmin } = useAppData();
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export default function Pick() {
         <Note style={{ marginTop: 0 }}>exc = rule exceptions · spread = most minus fewest tasks</Note>
         <BtnRow>
           <Btn kind="ghost" title="Preview" onPress={() => router.push({ pathname: '/plan/preview', params: { job: job.id, key: chosen.key } })} />
-          <Btn title={`Use ${chosen.label}`} onPress={publish} loading={busy} />
+          <Btn title={`Use ${chosen.label}`} onPress={publish} loading={busy} disabled={!isAdmin} />
         </BtnRow>
       </View>
     }>

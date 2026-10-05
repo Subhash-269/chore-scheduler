@@ -22,7 +22,7 @@ export default function Team() {
 
   return (
     <Screen>
-      <TopBar left={<T v="cap">{schedule.label} plan</T>} />
+      <TopBar left={<T v="cap">{schedule.label} plan</T>} action="Members" onAction={() => router.push('/members')} />
       <Header title="Household" sub={`${m.total_tasks} tasks · spread of ${m.workload_spread} task${m.workload_spread === 1 ? '' : 's'}`} />
       <View style={{ flexDirection: 'row', height: 6, borderRadius: 3, overflow: 'hidden', gap: 2, marginTop: 12 }}>
         {household.roommates.map((p) => <View key={p} style={{ flex: m.workload[p] || 0.001, backgroundColor: color(p) }} />)}
